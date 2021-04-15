@@ -9,10 +9,7 @@ from sgan.models import TrajectoryGenerator
 from sgan.losses import displacement_error, final_displacement_error
 from sgan.utils import relative_to_abs, get_dset_path
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--model_path', type=str)
-parser.add_argument('--num_samples', default=20, type=int)
-parser.add_argument('--dset_type', default='test', type=str)
+
 
 
 def get_generator(checkpoint):
@@ -92,6 +89,7 @@ def evaluate(args, loader, generator, num_samples):
 
 
 def main(args):
+    print(args)
     if os.path.isdir(args.model_path):
         filenames = os.listdir(args.model_path)
         filenames.sort()
@@ -105,6 +103,7 @@ def main(args):
         checkpoint = torch.load(path)
         generator = get_generator(checkpoint)
         _args = AttrDict(checkpoint['args'])
+        print(_args)
         path = get_dset_path(_args.dataset_name, args.dset_type)
         _, loader = data_loader(_args, path)
         ade, fde = evaluate(_args, loader, generator, args.num_samples)
@@ -113,5 +112,17 @@ def main(args):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_path', type=str,default="models/sgan-models")
+    parser.add_argument('--num_samples', default=20, type=int)
+    parser.add_argument('--dset_type', default='test', type=str)
+
     args = parser.parse_args()
+
     main(args)
+
+
+"""
+source env/bin/activate 
+ipython scripts/evaluate_model.py --model_path=models/sgan-models
+"""

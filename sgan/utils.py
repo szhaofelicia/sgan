@@ -88,8 +88,8 @@ def relative_to_abs(rel_traj, start_pos):
     - abs_traj: pytorch tensor of shape (seq_len, batch, 2)
     """
     # batch, seq_len, 2
-    rel_traj = rel_traj.permute(1, 0, 2)
-    displacement = torch.cumsum(rel_traj, dim=1)
-    start_pos = torch.unsqueeze(start_pos, dim=1)
+    rel_traj = rel_traj.permute(1, 0, 2) # (batch, seq_len, 2)
+    displacement = torch.cumsum(rel_traj, dim=1) # (batch, seq_len, 2)
+    start_pos = torch.unsqueeze(start_pos, dim=1) # (batch, 1, 2)
     abs_traj = displacement + start_pos
     return abs_traj.permute(1, 0, 2)

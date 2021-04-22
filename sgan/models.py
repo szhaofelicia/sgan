@@ -60,7 +60,8 @@ class Encoder(nn.Module):
         """
         # Encode observed Trajectory
         batch = obs_traj.size(1)
-        obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, 2))
+        # obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, 2))
+        obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, 2))
         obs_traj_embedding = obs_traj_embedding.view(
             -1, batch, self.embedding_dim
         )
@@ -503,6 +504,7 @@ class TrajectoryGenerator(nn.Module):
         Output:
         - pred_traj_rel: Tensor of shape (self.pred_len, batch, 2)
         """
+
         batch = obs_traj_rel.size(1)
         # Encode seq
         final_encoder_h = self.encoder(obs_traj_rel)
@@ -549,7 +551,7 @@ class TrajectoryGenerator(nn.Module):
 class TrajectoryDiscriminator(nn.Module):
     def __init__(
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
-        num_layers=1, activation='relu', batch_norm=True, dropout=0.0,
+        num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
         d_type='local'
     ):
         super(TrajectoryDiscriminator, self).__init__()
@@ -598,8 +600,8 @@ class TrajectoryDiscriminator(nn.Module):
         """
         final_h = self.encoder(traj_rel)
         # Note: In case of 'global' option we are using start_pos as opposed to
-        # end_pos. The intution being that hidden state has the whole
-        # trajectory and relative postion at the start when combined with
+        # end_pos. The intuition being that hidden state has the whole
+        # trajectory and relative position at the start when combined with
         # trajectory information should help in discriminative behavior.
         if self.d_type == 'local':
             classifier_input = final_h.squeeze()

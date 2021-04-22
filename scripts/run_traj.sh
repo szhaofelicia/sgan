@@ -1,4 +1,4 @@
-python train.py \
+ipython scripts/train.py \
   --dataset_name 'zara1' \
   --delim tab \
   --d_type 'local' \
@@ -10,7 +10,6 @@ python train.py \
   --bottleneck_dim 32 \
   --mlp_dim 64 \
   --num_layers 1 \
-  --noise_dim 8 \
   --noise_type gaussian \
   --noise_mix_type global \
   --pool_every_timestep 0 \
@@ -29,6 +28,8 @@ python train.py \
   --pooling_type 'pool_net' \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
-  --gpu_num 1 \
-  --checkpoint_name gan_test \
+  --checkpoint_name gan_zara1 \
   --restore_from_checkpoint 0
+
+#  --noise_dim 8 \
+#  --gpu_num 1 \

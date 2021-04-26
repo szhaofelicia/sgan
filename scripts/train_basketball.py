@@ -33,7 +33,8 @@ output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
 
-data_dir='/media/felicia/Data/basketball-partial'
+# data_dir='/media/felicia/Data/basketball-partial'
+data_dir='basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'

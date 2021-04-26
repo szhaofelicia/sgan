@@ -49,7 +49,7 @@ parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 
 # Optimization
-parser.add_argument('--batch_size', default=8, type=int) #32
+parser.add_argument('--batch_size', default=32, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
 parser.add_argument('--num_epochs', default=2000, type=int)
 
@@ -76,7 +76,7 @@ parser.add_argument('--encoder_h_dim_d', default=64, type=int) #default:64
 parser.add_argument('--d_learning_rate', default=1e-5, type=float) #default:5e-4, 0.001
 parser.add_argument('--d_steps', default=2, type=int) #default:2
 parser.add_argument('--clipping_threshold_d', default=0, type=float)
-parser.add_argument('--d_activation', default='leakyrelu', type=str) # 'relu'
+parser.add_argument('--d_activation', default='relu', type=str) # 'relu'
 
 
 # Pooling Options
@@ -99,7 +99,7 @@ parser.add_argument('--l2_loss_mode', default="raw", type=str) #default:"raw"
 # Output
 parser.add_argument('--output_dir', default=output_dir) # os.getcwd()
 parser.add_argument('--print_every', default=100, type=int) #default:5
-parser.add_argument('--checkpoint_every', default=1000, type=int) #default:100
+parser.add_argument('--checkpoint_every', default=5000, type=int) #default:100
 parser.add_argument('--checkpoint_name', default='gan_zara1')
 parser.add_argument('--checkpoint_start_from', default=None)
 parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
@@ -130,7 +130,7 @@ def main(args):
     print(args)
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
-    train_path = get_dset_path(args.dataset_name, 'tmp_train')
+    train_path = get_dset_path(args.dataset_name, 'train')
     val_path = get_dset_path(args.dataset_name, 'val')
 
     long_dtype, float_dtype = get_dtypes(args)

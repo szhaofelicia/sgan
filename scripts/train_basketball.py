@@ -4,12 +4,15 @@ import logging
 import os
 import sys
 import time
+import yaml
 
 from collections import defaultdict
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from torch.utils.tensorboard import SummaryWriter
 
 from sgan.data.loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
@@ -19,17 +22,26 @@ from sgan.models import TrajectoryGenerator, TrajectoryDiscriminator
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
 
+
 torch.backends.cudnn.benchmark = True
+
+
+writer = SummaryWriter()
+
+time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
+output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
+if not os.path.exists(output_dir):
+    os.mkdir(output_dir)
+
+data_dir='/media/felicia/Data/basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-## Use setting for ETH-8
 # Dataset options
-parser.add_argument('--dataset_dir', default='/media/felicia/Data/basketball-partial', type=str) #default"eth
-parser.add_argument('--dataset_name', default='01.01.2016.ORL.at.WAS', type=str) #default"eth
+parser.add_argument('--dataset_name', default='01.01.2016.ORL.at.WAS', type=str) #default:zara1
 parser.add_argument('--delim', default=',') #default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
@@ -37,56 +49,60 @@ parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 
 # Optimization
-parser.add_argument('--batch_size', default=256, type=int) # 64-
-parser.add_argument('--num_iterations', default=9012, type=int) #default:10000
-parser.add_argument('--num_epochs', default=200, type=int)
+parser.add_argument('--batch_size', default=32, type=int) #32
+parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
+parser.add_argument('--num_epochs', default=500, type=int)
 
 # Model Options
-parser.add_argument('--embedding_dim', default=16, type=int) #default:64
+parser.add_argument('--embedding_dim', default=16, type=int) #64
 parser.add_argument('--num_layers', default=1, type=int)
-parser.add_argument('--dropout', default=0.0, type=float)
-parser.add_argument('--batch_norm', default=False, type=bool) #default:0-bool_flag
+parser.add_argument('--dropout', default=0, type=float)
+parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
 
 # Generator Options
-parser.add_argument('--encoder_h_dim_g', default=48, type=int) #default:64
+parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
 parser.add_argument('--decoder_h_dim_g', default=32, type=int) #default:128
-parser.add_argument('--noise_dim', default=(8,), type=tuple) # default: None-int_tuple
+parser.add_argument('--noise_dim', default=(8,), type=int_tuple) # default: None-int_tuple
 parser.add_argument('--noise_type', default='gaussian')
 parser.add_argument('--noise_mix_type', default='global') #default:pred
-parser.add_argument('--clipping_threshold_g', default=2.0, type=float) #default:0
-parser.add_argument('--g_learning_rate', default=0.0001, type=float) #default:5e-4
+parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:0
+parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
 
+# Discriminator Options
+parser.add_argument('--d_type', default='local', type=str) #default:'local'
+parser.add_argument('--encoder_h_dim_d', default=64, type=int) #default:64
+parser.add_argument('--d_learning_rate', default=1e-3, type=float) #default:5e-4, 0.001
+parser.add_argument('--d_steps', default=2, type=int) #default:2
+parser.add_argument('--clipping_threshold_d', default=0, type=float)
+parser.add_argument('--d_activation', default='relu', type=str) # 'relu'
+
+
 # Pooling Options
-parser.add_argument('--pooling_type', default='none') #default:'pool_net'
-parser.add_argument('--pool_every_timestep', default=False, type=bool) #default:1-bool_flag
+parser.add_argument('--pooling_type', default='pool_net') #default:'pool_net'
+parser.add_argument('--pool_every_timestep', default=0, type=bool_flag) #default:1-bool_flag
 
 # Pool Net Option
-parser.add_argument('--bottleneck_dim', default=8, type=int) # 1024
+parser.add_argument('--bottleneck_dim', default=32, type=int) # 1024
 
 # Social Pooling Options
 parser.add_argument('--neighborhood_size', default=2.0, type=float)
 parser.add_argument('--grid_size', default=8, type=int)
 
-# Discriminator Options
-parser.add_argument('--d_type', default='global', type=str) #default:'local'
-parser.add_argument('--encoder_h_dim_d', default=48, type=int) #default:64
-parser.add_argument('--d_learning_rate', default=0.001, type=float) #default:5e-4
-parser.add_argument('--d_steps', default=1, type=int) #default:2
-parser.add_argument('--clipping_threshold_d', default=0, type=float)
-
 # Loss Options
-parser.add_argument('--l2_loss_weight', default=1.0, type=float) #default:0
-parser.add_argument('--best_k', default=20, type=int) #default:1
+parser.add_argument('--l2_loss_weight', default=1, type=float) #default:0->1
+parser.add_argument('--best_k', default=10, type=int) #default:1
+parser.add_argument('--l2_loss_mode', default="raw", type=str) #default:"raw"
+
 
 # Output
-parser.add_argument('--output_dir', default=os.getcwd())
-parser.add_argument('--print_every', default=100, type=int) #default:5
-parser.add_argument('--checkpoint_every', default=300, type=int) #default:100
-parser.add_argument('--checkpoint_name', default='checkpoint')
+parser.add_argument('--output_dir', default=output_dir) # os.getcwd()
+parser.add_argument('--print_every', default=10, type=int) #default:5
+parser.add_argument('--checkpoint_every', default=100, type=int) #default:100
+parser.add_argument('--checkpoint_name', default='basketball_orl_was')
 parser.add_argument('--checkpoint_start_from', default=None)
-parser.add_argument('--restore_from_checkpoint', default=1, type=int)
+parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
 parser.add_argument('--num_samples_check', default=5000, type=int)
 
 # Misc
@@ -111,14 +127,14 @@ def get_dtypes(args):
 
 
 def main(args):
+    print(args)
+
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     # train_path = get_dset_path(args.dataset_name, 'train')
     # val_path = get_dset_path(args.dataset_name, 'val')
 
-    # all_path = os.path.join(args.dataset_dir,args.dataset_name)
-
-    train_path = os.path.join(args.dataset_dir,args.dataset_name+'/train')
-    val_path = os.path.join(args.dataset_dir,args.dataset_name+'/val')
+    train_path= os.path.join(data_dir,args.dataset_name,'train_sample') # 200 files:0-199
+    val_path= os.path.join(data_dir,args.dataset_name,'val_sample') # 100 files: 200-299 - 285(noise)
 
     long_dtype, float_dtype = get_dtypes(args)
 
@@ -168,7 +184,9 @@ def main(args):
         num_layers=args.num_layers,
         dropout=args.dropout,
         batch_norm=args.batch_norm,
-        d_type=args.d_type)
+        d_type=args.d_type,
+        activation=args.d_activation # default: relu
+    )
 
     discriminator.apply(init_weights)
     discriminator.type(float_dtype).train()
@@ -283,12 +301,18 @@ def main(args):
             if t % args.print_every == 0:
                 logger.info('t = {} / {}'.format(t + 1, args.num_iterations))
                 for k, v in sorted(losses_d.items()):
-                    logger.info('  [D] {}: {:.3f}'.format(k, v))
+                    # logger.info('  [D] {}: {:.3f}'.format(k, v))
                     checkpoint['D_losses'][k].append(v)
                 for k, v in sorted(losses_g.items()):
-                    logger.info('  [G] {}: {:.3f}'.format(k, v))
+                    # logger.info('  [G] {}: {:.3f}'.format(k, v))
                     checkpoint['G_losses'][k].append(v)
                 checkpoint['losses_ts'].append(t)
+
+                ## log scalars
+                for k, v in sorted(losses_d.items()):
+                    writer.add_scalar("loss/{}".format(k), v, t)
+                for k, v in sorted(losses_g.items()):
+                    writer.add_scalar("loss/{}".format(k), v, t)
 
             # Maybe save a checkpoint
             if t > 0 and t % args.checkpoint_every == 0:
@@ -308,11 +332,17 @@ def main(args):
                 )
 
                 for k, v in sorted(metrics_val.items()):
-                    logger.info('  [val] {}: {:.3f}'.format(k, v))
+                    # logger.info('  [val] {}: {:.3f}'.format(k, v))
                     checkpoint['metrics_val'][k].append(v)
                 for k, v in sorted(metrics_train.items()):
-                    logger.info('  [train] {}: {:.3f}'.format(k, v))
+                    # logger.info('  [train] {}: {:.3f}'.format(k, v))
                     checkpoint['metrics_train'][k].append(v)
+
+                ## log scalars
+                for k, v in sorted(metrics_val.items()):
+                    writer.add_scalar("val/{}".format(k), v, t)
+                for k, v in sorted(metrics_train.items()):
+                    writer.add_scalar("train/{}".format(k), v, t)
 
                 min_ade = min(checkpoint['metrics_val']['ade'])
                 min_ade_nl = min(checkpoint['metrics_val']['ade_nl'])
@@ -335,17 +365,21 @@ def main(args):
                 checkpoint['g_optim_state'] = optimizer_g.state_dict()
                 checkpoint['d_state'] = discriminator.state_dict()
                 checkpoint['d_optim_state'] = optimizer_d.state_dict()
-                checkpoint_path = os.path.join(
-                    args.output_dir, '%s_with_model.pt' % args.checkpoint_name
-                )
+                # checkpoint_path = os.path.join(
+                #     args.output_dir, '{}_with_model_{:06d}.pt'.format(args.checkpoint_name,t)
+                # )
+                checkpoint_path = os.path.join(args.output_dir, '{}_with_mode.pt'.format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 torch.save(checkpoint, checkpoint_path)
                 logger.info('Done.')
 
                 # Save a checkpoint with no model weights by making a shallow
                 # copy of the checkpoint excluding some items
-                checkpoint_path = os.path.join(
-                    args.output_dir, '%s_no_model.pt' % args.checkpoint_name)
+
+                # checkpoint_path = os.path.join(
+                #     args.output_dir, '{}_no_model_{:06d}.pt' .format(args.checkpoint_name,t))
+
+                checkpoint_path = os.path.join(args.output_dir, '{}_no_model.pt' .format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 key_blacklist = [
                     'g_state', 'd_state', 'g_best_state', 'g_best_nl_state',
@@ -365,6 +399,12 @@ def main(args):
             if t >= args.num_iterations:
                 break
 
+
+        ## log scalars
+        # for k, v in sorted(losses_d.items()):
+        #     writer.add_scalar("train/{}".format(k),v,epoch)
+        # for k, v in sorted(losses_g.items()):
+        #     writer.add_scalar("train/{}".format(k),v,epoch)
 
 def discriminator_step(
     args, batch, generator, discriminator, d_loss_fn, optimizer_d
@@ -388,10 +428,17 @@ def discriminator_step(
     scores_fake = discriminator(traj_fake, traj_fake_rel, seq_start_end)
     scores_real = discriminator(traj_real, traj_real_rel, seq_start_end)
 
+
     # Compute loss with optional gradient penalty
-    data_loss = d_loss_fn(scores_real, scores_fake)
-    losses['D_data_loss'] = data_loss.item()
-    loss += data_loss
+    # data_loss = d_loss_fn(scores_real, scores_fake)
+    # losses['D_data_loss'] = data_loss.item()
+    # loss += data_loss
+
+    d_loss_real, d_loss_fak=d_loss_fn(scores_real, scores_fake)
+    losses['D_real_loss'] = d_loss_real.item()
+    losses['D_fake_loss'] = d_loss_fak.item()
+    loss += d_loss_real+d_loss_fak
+
     losses['D_total_loss'] = loss.item()
 
     optimizer_d.zero_grad()
@@ -419,6 +466,7 @@ def generator_step(
     for _ in range(args.best_k):
         generator_out = generator(obs_traj, obs_traj_rel, seq_start_end)
 
+
         pred_traj_fake_rel = generator_out
         pred_traj_fake = relative_to_abs(pred_traj_fake_rel, obs_traj[-1])
 
@@ -427,7 +475,8 @@ def generator_step(
                 pred_traj_fake_rel,
                 pred_traj_gt_rel,
                 loss_mask,
-                mode='raw'))
+                mode=args.l2_loss_mode # default:"raw"
+            ))
 
     g_l2_loss_sum_rel = torch.zeros(1).to(pred_traj_gt)
     if args.l2_loss_weight > 0:
@@ -506,7 +555,11 @@ def check_accuracy(
             scores_fake = discriminator(traj_fake, traj_fake_rel, seq_start_end)
             scores_real = discriminator(traj_real, traj_real_rel, seq_start_end)
 
-            d_loss = d_loss_fn(scores_real, scores_fake)
+            # d_loss = d_loss_fn(scores_real, scores_fake)
+            # d_losses.append(d_loss.item())
+
+            d_loss_real, d_loss_fak = d_loss_fn(scores_real, scores_fake)
+            d_loss=d_loss_real+d_loss_fak
             d_losses.append(d_loss.item())
 
             g_l2_losses_abs.append(g_l2_loss_abs.item())
@@ -584,4 +637,19 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    # log_path="{}/config.txt".format(writer.get_logdir())
+    # with open(log_path,"a") as f:
+    #     json.dump(args.__dict__,f,indent=2)
+
+    log_path="{}/config.yaml".format(writer.get_logdir())
+    # if not os.path.exists(log_path):
+    #     os.mkdir(log_path)
+    with open(log_path,'w') as file:
+        args_file=yaml.dump(args,file)
+    print(args_file)
+
     main(args)
+    writer.flush()
+
+

@@ -4,7 +4,8 @@ import logging
 import os
 import sys
 import time
-import yaml
+import json
+# import yaml
 
 from collections import defaultdict
 
@@ -50,7 +51,7 @@ parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 
 # Optimization
-parser.add_argument('--batch_size', default=32, type=int) #32
+parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
 parser.add_argument('--num_epochs', default=500, type=int)
 
@@ -100,7 +101,7 @@ parser.add_argument('--l2_loss_mode', default="raw", type=str) #default:"raw"
 # Output
 parser.add_argument('--output_dir', default=output_dir) # os.getcwd()
 parser.add_argument('--print_every', default=10, type=int) #default:5
-parser.add_argument('--checkpoint_every', default=100, type=int) #default:100
+parser.add_argument('--checkpoint_every', default=50, type=int) #default:100
 parser.add_argument('--checkpoint_name', default='basketball_orl_was')
 parser.add_argument('--checkpoint_start_from', default=None)
 parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
@@ -639,16 +640,14 @@ def cal_fde(
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    # log_path="{}/config.txt".format(writer.get_logdir())
-    # with open(log_path,"a") as f:
-    #     json.dump(args.__dict__,f,indent=2)
+    log_path="{}/config.txt".format(writer.get_logdir())
+    with open(log_path,"a") as f:
+        json.dump(args.__dict__,f,indent=2)
 
-    log_path="{}/config.yaml".format(writer.get_logdir())
-    # if not os.path.exists(log_path):
-    #     os.mkdir(log_path)
-    with open(log_path,'w') as file:
-        args_file=yaml.dump(args,file)
-    print(args_file)
+    # log_path="{}/config.yaml".format(writer.get_logdir())
+    # with open(log_path,'w') as file:
+    #     args_file=yaml.dump(args,file)
+    # print(args_file)
 
     main(args)
     writer.flush()

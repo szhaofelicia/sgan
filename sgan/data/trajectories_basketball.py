@@ -115,7 +115,6 @@ class TrajectoryDataset(Dataset):
         for path in tqdm(all_files):
             data = read_file(path, delim)
 
-            # print(path,len(data))
             frames = np.unique(data[:, 0]).tolist()
             frame_data = []
             for frame in frames:

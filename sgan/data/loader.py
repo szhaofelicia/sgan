@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 
-from sgan.data.trajectories import TrajectoryDataset, seq_collate
-# from sgan.data.trajectories_basketball import TrajectoryDataset, seq_collate
+# from sgan.data.trajectories import TrajectoryDataset, seq_collate
+from sgan.data.trajectories_basketball import TrajectoryDataset, seq_collate
 
 
 def data_loader(args, path):

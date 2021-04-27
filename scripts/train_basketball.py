@@ -41,7 +41,7 @@ if not os.path.exists(output_dir):
     os.mkdir(output_dir)
 
 # data_dir='/media/felicia/Data/basketball-partial'
-data_dir='basketball-partial'
+data_dir='/scratch/sz2257/sgan/basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'

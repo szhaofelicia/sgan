@@ -1,8 +1,13 @@
+import sys
 import argparse
 import gc
 import logging
 import os
-import sys
+print(os.path.realpath(__file__) )
+
+print("Current Working Directory " , os.getcwd())
+sys.path.append(os.getcwd())
+
 import time
 import json
 # import yaml
@@ -25,8 +30,6 @@ from sgan.utils import relative_to_abs, get_dset_path
 
 
 torch.backends.cudnn.benchmark = True
-
-
 writer = SummaryWriter()
 
 time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])

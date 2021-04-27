@@ -3,7 +3,6 @@ import argparse
 import gc
 import logging
 import os
-# print(os.path.realpath(__file__) )
 
 # print("Current Working Directory " , os.getcwd())
 # sys.path.append(os.getcwd())
@@ -35,7 +34,9 @@ torch.backends.cudnn.benchmark = True
 writer = SummaryWriter()
 
 time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
-output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
+# output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
+
+output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
 

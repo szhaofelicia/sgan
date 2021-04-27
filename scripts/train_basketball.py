@@ -3,10 +3,12 @@ import argparse
 import gc
 import logging
 import os
-print(os.path.realpath(__file__) )
+# print(os.path.realpath(__file__) )
 
-print("Current Working Directory " , os.getcwd())
-sys.path.append(os.getcwd())
+# print("Current Working Directory " , os.getcwd())
+# sys.path.append(os.getcwd())
+
+sys.path.append("/scratch/sz2257/sgan")
 
 import time
 import json

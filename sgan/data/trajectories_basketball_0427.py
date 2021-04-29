@@ -130,7 +130,7 @@ class TrajectoryDataset(Dataset):
 
     def __init__(
             self, data_dir, obs_len=8, pred_len=12, skip=1, threshold=0.002,
-            min_ped=1, delim='\t'
+            min_ped=1, delim='\t', metric="meter"
     ):
         """
         Args:
@@ -160,6 +160,11 @@ class TrajectoryDataset(Dataset):
         self.seq_len = self.obs_len + self.pred_len
         self.delim = delim
 
+        if metric=="meter":
+            self.factor=0.3048 # foot to meter
+        else:
+            self.factor=1.0 # foot to foot
+
         all_files = os.listdir(self.data_dir)
         all_files = [os.path.join(self.data_dir, _path) for _path in all_files]
         num_peds_in_seq = []
@@ -172,10 +177,6 @@ class TrajectoryDataset(Dataset):
 
         for path in tqdm(all_files):
             data = parse_file(path, delim)
-
-            # row_len=[len(row) for row in data]
-            # row_len=np.unique(row_len)
-            # print(row_len)
 
             frames = np.unique(data[:, 0]).tolist()
             frame_data = []
@@ -208,7 +209,7 @@ class TrajectoryDataset(Dataset):
                     if pad_end - pad_front != self.seq_len or curr_ped_seq_full.shape[0] != self.seq_len:
                         continue
                     curr_ped_seq = np.transpose(curr_ped_seq_full[:, 3:5])  # x,y
-                    curr_ped_seq = curr_ped_seq
+                    curr_ped_seq = curr_ped_seq * self.factor # conversion
                     # Make coordinates relative
                     rel_curr_ped_seq = np.zeros(curr_ped_seq.shape)
                     rel_curr_ped_seq[:, 1:] = curr_ped_seq[:, 1:] - curr_ped_seq[:, :-1]
@@ -278,9 +279,6 @@ class TrajectoryDataset(Dataset):
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
 
-        # print(self.obs_traj.shape)
-        # print(self.obs_team_vec.shape)
-        # print(self.obs_pos_vec.shape)
 
     def __len__(self):
         return self.num_seq

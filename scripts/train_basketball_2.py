@@ -25,7 +25,13 @@ from sgan.data.loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
-from sgan.models import TrajectoryGenerator, TrajectoryDiscriminator
+from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
+from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
+
+MODELS = {
+    "baseline": (GeneratorBaseline, DiscriminatorBaseline),
+    "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
+}
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
 
@@ -54,7 +60,7 @@ parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
-
+parser.add_argument("--model", default="baseline", type=str)
 # Optimization
 parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
@@ -132,7 +138,8 @@ def get_dtypes(args):
         float_dtype = torch.cuda.FloatTensor
     return long_dtype, float_dtype
 
-
+TrajectoryDiscriminator = None
+TrajectoryGenerator = None
 def main(args):
     print(args)
     if not os.path.exists(args.output_dir):
@@ -177,7 +184,6 @@ def main(args):
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
         batch_norm=args.batch_norm)
-
     generator.apply(init_weights)
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')
@@ -418,12 +424,13 @@ def discriminator_step(
     args, batch, generator, discriminator, d_loss_fn, optimizer_d
 ):
     batch = [tensor.cuda() for tensor in batch]
-    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec, non_linear_ped,
-     loss_mask, seq_start_end) = batch
+    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+     obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
+     non_linear_ped, loss_mask, seq_start_end) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
 
-    generator_out = generator(obs_traj, obs_traj_rel, seq_start_end)
+    generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec)
 
     pred_traj_fake_rel = generator_out
     pred_traj_fake = relative_to_abs(pred_traj_fake_rel, obs_traj[-1])
@@ -432,9 +439,10 @@ def discriminator_step(
     traj_real_rel = torch.cat([obs_traj_rel, pred_traj_gt_rel], dim=0)
     traj_fake = torch.cat([obs_traj, pred_traj_fake], dim=0)
     traj_fake_rel = torch.cat([obs_traj_rel, pred_traj_fake_rel], dim=0)
-
-    scores_fake = discriminator(traj_fake, traj_fake_rel, seq_start_end)
-    scores_real = discriminator(traj_real, traj_real_rel, seq_start_end)
+    all_team_vec = torch.cat([obs_team_vec, pred_team_vec], dim=0)
+    all_pos_vec = torch.cat([obs_pos_vec, pred_pos_vec], dim=0)
+    scores_fake = discriminator(traj_fake, traj_fake_rel, all_team_vec, all_pos_vec, seq_start_end)
+    scores_real = discriminator(traj_real, traj_real_rel, all_team_vec, all_pos_vec, seq_start_end)
 
 
     # Compute loss with optional gradient penalty
@@ -463,8 +471,9 @@ def generator_step(
     args, batch, generator, discriminator, g_loss_fn, optimizer_g
 ):
     batch = [tensor.cuda() for tensor in batch]
-    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec, non_linear_ped,
-     loss_mask, seq_start_end) = batch
+    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+     obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
+     non_linear_ped, loss_mask, seq_start_end) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
     g_l2_loss_rel = []
@@ -472,7 +481,7 @@ def generator_step(
     loss_mask = loss_mask[:, args.obs_len:]
 
     for _ in range(args.best_k):
-        generator_out = generator(obs_traj, obs_traj_rel, seq_start_end)
+        generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec)
 
 
         pred_traj_fake_rel = generator_out
@@ -500,8 +509,9 @@ def generator_step(
 
     traj_fake = torch.cat([obs_traj, pred_traj_fake], dim=0)
     traj_fake_rel = torch.cat([obs_traj_rel, pred_traj_fake_rel], dim=0)
-
-    scores_fake = discriminator(traj_fake, traj_fake_rel, seq_start_end)
+    all_team_vec = torch.cat([obs_team_vec, pred_team_vec], dim=0)
+    all_pos_vec = torch.cat([obs_pos_vec, pred_pos_vec], dim=0)
+    scores_fake = discriminator(traj_fake, traj_fake_rel, all_team_vec, all_pos_vec,seq_start_end)
     discriminator_loss = g_loss_fn(scores_fake)
 
     loss += discriminator_loss
@@ -533,13 +543,14 @@ def check_accuracy(
     with torch.no_grad():
         for batch in loader:
             batch = [tensor.cuda() for tensor in batch]
-            (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec,
+            (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+             obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
              non_linear_ped, loss_mask, seq_start_end) = batch
             linear_ped = 1 - non_linear_ped
             loss_mask = loss_mask[:, args.obs_len:]
 
             pred_traj_fake_rel = generator(
-                obs_traj, obs_traj_rel, seq_start_end
+                obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec
             )
             pred_traj_fake = relative_to_abs(pred_traj_fake_rel, obs_traj[-1])
 
@@ -559,9 +570,10 @@ def check_accuracy(
             traj_real_rel = torch.cat([obs_traj_rel, pred_traj_gt_rel], dim=0)
             traj_fake = torch.cat([obs_traj, pred_traj_fake], dim=0)
             traj_fake_rel = torch.cat([obs_traj_rel, pred_traj_fake_rel], dim=0)
-
-            scores_fake = discriminator(traj_fake, traj_fake_rel, seq_start_end)
-            scores_real = discriminator(traj_real, traj_real_rel, seq_start_end)
+            all_team_vec = torch.cat([obs_team_vec, pred_team_vec], dim=0)
+            all_pos_vec = torch.cat([obs_pos_vec, pred_pos_vec], dim=0)
+            scores_fake = discriminator(traj_fake, traj_fake_rel, all_team_vec, all_pos_vec,seq_start_end)
+            scores_real = discriminator(traj_real, traj_real_rel, all_team_vec, all_pos_vec, seq_start_end)
 
             # d_loss = d_loss_fn(scores_real, scores_fake)
             # d_losses.append(d_loss.item())
@@ -645,7 +657,7 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-
+    TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)

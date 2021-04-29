@@ -3,7 +3,8 @@ import argparse
 import gc
 import logging
 import os
-
+import numpy as np
+import torch
 
 from sgan.data.loader import data_loader
 from sgan.utils import int_tuple, bool_flag, get_total_norm
@@ -22,6 +23,7 @@ parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
+parser.add_argument('--metric', default='meter', type=str) # original dataset: foot, default: foot to meter
 
 # Optimization
 parser.add_argument('--batch_size', default=8, type=int)  # 32
@@ -88,11 +90,20 @@ args = parser.parse_args()
 tmp_path= os.path.join(data_dir,'01.02.2016.DEN.at.GSW','tmp') # 200 files:0-199
 tmp_dset, tmp_loader = data_loader(args, tmp_path)
 
+
+traj_max=[]
+
 for batch in tmp_loader:
     # batch = [tensor.cuda() for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
      obs_team_vec, obs_pos_vec,non_linear_ped, loss_mask, seq_start_end) = batch
-    print(obs_traj.shape) # (obs_len, batch, 32
-    print(obs_team_vec.shape) # (obs_len, batch, 3)
-    print(obs_pos_vec.shape) # (obs_len, batch, 4)
-    break
+    # print(obs_traj.shape) # (obs_len, batch, 32
+    # print(obs_team_vec.shape) # (obs_len, batch, 3)
+    # print(obs_pos_vec.shape) # (obs_len, batch, 4)
+    # print(obs_traj.shape)
+
+    tmp=torch.max(torch.flatten(obs_traj))
+    traj_max.append(tmp)
+
+xy_max=max(traj_max)
+print(xy_max)

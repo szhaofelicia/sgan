@@ -7,8 +7,8 @@ import os
 # print("Current Working Directory " , os.getcwd())
 # sys.path.append(os.getcwd())
 
-sys.path.append("/scratch/sz2257/sgan")
-
+# sys.path.append("/scratch/sz2257/sgan")
+sys.path.append("../")
 import time
 import json
 # import yaml
@@ -37,8 +37,6 @@ time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
 # output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
 
 output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
 
 # data_dir='/media/felicia/Data/basketball-partial'
 data_dir='/scratch/sz2257/sgan/basketball-partial'
@@ -50,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 # Dataset options
 parser.add_argument('--dataset_name', default='01.02.2016.PHX.at.SAC.new', type=str) #default:zara1
+parser.add_argument('--dataset_dir', default=data_dir, type=str)
 parser.add_argument('--delim', default=',') #default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
@@ -136,13 +135,14 @@ def get_dtypes(args):
 
 def main(args):
     print(args)
+    if not os.path.exists(args.output_dir):
+        os.mkdir(args.output_dir)
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     # train_path = get_dset_path(args.dataset_name, 'train')
     # val_path = get_dset_path(args.dataset_name, 'val')
-
-    train_path= os.path.join(data_dir,args.dataset_name,'train_sample') # 10 files:0-9
-    val_path= os.path.join(data_dir,args.dataset_name,'val_sample') # 5 files: 10-14
+    train_path= os.path.join(args.dataset_dir,args.dataset_name,'train_sample') # 10 files:0-9
+    val_path= os.path.join(args.dataset_dir,args.dataset_name,'val_sample') # 5 files: 10-14
 
     long_dtype, float_dtype = get_dtypes(args)
 
@@ -418,7 +418,7 @@ def discriminator_step(
     args, batch, generator, discriminator, d_loss_fn, optimizer_d
 ):
     batch = [tensor.cuda() for tensor in batch]
-    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,
+    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec, non_linear_ped,
      loss_mask, seq_start_end) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
@@ -463,7 +463,7 @@ def generator_step(
     args, batch, generator, discriminator, g_loss_fn, optimizer_g
 ):
     batch = [tensor.cuda() for tensor in batch]
-    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, non_linear_ped,
+    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec, non_linear_ped,
      loss_mask, seq_start_end) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
@@ -533,7 +533,7 @@ def check_accuracy(
     with torch.no_grad():
         for batch in loader:
             batch = [tensor.cuda() for tensor in batch]
-            (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+            (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel, obs_team_vec, obs_pos_vec,
              non_linear_ped, loss_mask, seq_start_end) = batch
             linear_ped = 1 - non_linear_ped
             loss_mask = loss_mask[:, args.obs_len:]

@@ -27,7 +27,7 @@ from sgan.losses import displacement_error, final_displacement_error
 
 from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
 from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
-
+from sgan.models_teampos import TrajectoryGenerator,  TrajectoryDiscriminator
 MODELS = {
     "baseline": (GeneratorBaseline, DiscriminatorBaseline),
     "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
@@ -73,6 +73,8 @@ parser.add_argument('--num_layers', default=1, type=int)
 parser.add_argument('--dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
+parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
+parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
@@ -139,8 +141,8 @@ def get_dtypes(args):
         float_dtype = torch.cuda.FloatTensor
     return long_dtype, float_dtype
 
-TrajectoryDiscriminator = None
-TrajectoryGenerator = None
+# TrajectoryDiscriminator = None
+# TrajectoryGenerator = None
 def main(args):
     print(args)
     if not os.path.exists(args.output_dir):
@@ -184,7 +186,10 @@ def main(args):
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
-        batch_norm=args.batch_norm)
+        batch_norm=args.batch_norm,
+        team_embedding_dim=args.team_embedding_dim,
+        pos_embedding_dim=args.pos_embedding_dim
+    )
     generator.apply(init_weights)
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')
@@ -200,7 +205,9 @@ def main(args):
         dropout=args.dropout,
         batch_norm=args.batch_norm,
         d_type=args.d_type,
-        activation=args.d_activation # default: relu
+        activation=args.d_activation, # default: relu,
+        pos_embedding_dim = args.pos_embedding_dim,
+        team_embedding_dim = args.team_embedding_dim
     )
 
     discriminator.apply(init_weights)
@@ -658,7 +665,7 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
+    # TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)

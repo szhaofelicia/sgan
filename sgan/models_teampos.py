@@ -29,21 +29,25 @@ class Encoder(nn.Module):
     """Encoder is part of both TrajectoryGenerator and
     TrajectoryDiscriminator"""
     def __init__(
-        self, embedding_dim=64, h_dim=64, mlp_dim=1024, num_layers=1,
-        dropout=0.0
+        self, embedding_dim=64, h_dim=64, mlp_dim=1024,  num_layers=1,
+        dropout=0.0, team_embedding_dim = 16, pos_embedding_dim=32
     ):
         super(Encoder, self).__init__()
 
         self.mlp_dim = 1024
         self.h_dim = h_dim
         self.embedding_dim = embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
+        self.team_embedding_dim = team_embedding_dim
         self.num_layers = num_layers
 
         self.encoder = nn.LSTM(
-            embedding_dim, h_dim, num_layers, dropout=dropout
+            embedding_dim + pos_embedding_dim + team_embedding_dim, h_dim, num_layers, dropout=dropout
         )
-
+        self.team_embedding = nn.Linear(3, team_embedding_dim)
+        self.pos_embedding = nn.Linear(4, pos_embedding_dim)
         self.spatial_embedding = nn.Linear(2, embedding_dim)
+        self.dropout = nn.Dropout(p=dropout)
 
     def init_hidden(self, batch):
         return (
@@ -51,7 +55,7 @@ class Encoder(nn.Module):
             torch.zeros(self.num_layers, batch, self.h_dim).cuda()
         )
 
-    def forward(self, obs_traj):
+    def forward(self, obs_traj, obs_team, obs_pos):
         """
         Inputs:
         - obs_traj: Tensor of shape (obs_len, batch, 2)
@@ -62,11 +66,22 @@ class Encoder(nn.Module):
         batch = obs_traj.size(1)
         # obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, 2))
         obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, 2))
+        obs_team_embedding = self.team_embedding(obs_team.reshape(-1, 3))
+        obs_pos_embedding = self.pos_embedding(obs_pos.reshape(-1, 4))
+        obs_team_embedding = self.dropout(obs_team_embedding)
+        obs_pos_embedding = self.dropout(obs_pos_embedding)
         obs_traj_embedding = obs_traj_embedding.view(
             -1, batch, self.embedding_dim
         )
+        obs_team_embedding = obs_team_embedding.view(
+            -1, batch, self.team_embedding_dim
+        )
+        obs_pos_embedding = obs_pos_embedding.view(
+            -1, batch, self.pos_embedding_dim
+        )
+        obs_embedding = torch.cat([obs_traj_embedding, obs_team_embedding, obs_pos_embedding], dim=2)
         state_tuple = self.init_hidden(batch)
-        output, state = self.encoder(obs_traj_embedding, state_tuple)
+        output, state = self.encoder(obs_embedding, state_tuple)
         final_h = state[0]
         return final_h
 
@@ -214,7 +229,7 @@ class PoolHiddenNet(nn.Module):
             end = end.item()
             num_ped = end - start
             curr_hidden = h_states.view(-1, self.h_dim)[start:end]
-            curr_end_pos = end_pos[start:end] # num_ped*2
+            curr_end_pos = end_pos[start:end]
             # Repeat -> H1, H2, H1, H2
             curr_hidden_1 = curr_hidden.repeat(num_ped, 1)
             # Repeat position -> P1, P2, P1, P2
@@ -358,13 +373,15 @@ class TrajectoryGenerator(nn.Module):
         decoder_h_dim=128, mlp_dim=1024, num_layers=1, noise_dim=(0, ),
         noise_type='gaussian', noise_mix_type='ped', pooling_type=None,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8
+        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
+            team_embedding_dim=16, pos_embedding_dim=32
     ):
         super(TrajectoryGenerator, self).__init__()
 
         if pooling_type and pooling_type.lower() == 'none':
             pooling_type = None
-
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.mlp_dim = mlp_dim
@@ -385,7 +402,9 @@ class TrajectoryGenerator(nn.Module):
             h_dim=encoder_h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            team_embedding_dim=self.team_embedding_dim,
+            pos_embedding_dim=self.pos_embedding_dim
         )
 
         self.decoder = Decoder(
@@ -500,7 +519,6 @@ class TrajectoryGenerator(nn.Module):
         - obs_traj_rel: Tensor of shape (obs_len, batch, 2)
         - seq_start_end: A list of tuples which delimit sequences within batch.
         - user_noise: Generally used for inference when you want to see
-        - obs_team, obs_pos: team and pos, but will not be used in this model
         relation between different types of noise and outputs.
         Output:
         - pred_traj_rel: Tensor of shape (self.pred_len, batch, 2)
@@ -508,7 +526,7 @@ class TrajectoryGenerator(nn.Module):
 
         batch = obs_traj_rel.size(1)
         # Encode seq
-        final_encoder_h = self.encoder(obs_traj_rel)
+        final_encoder_h = self.encoder(obs_traj_rel, obs_team, obs_pos)
         # Pool States
         if self.pooling_type:
             end_pos = obs_traj[-1, :, :]
@@ -553,7 +571,7 @@ class TrajectoryDiscriminator(nn.Module):
     def __init__(
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
         num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
-        d_type='local'
+        d_type='local', team_embedding_dim=16, pos_embedding_dim=32
     ):
         super(TrajectoryDiscriminator, self).__init__()
 
@@ -563,13 +581,16 @@ class TrajectoryDiscriminator(nn.Module):
         self.mlp_dim = mlp_dim
         self.h_dim = h_dim
         self.d_type = d_type
-
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
         self.encoder = Encoder(
             embedding_dim=embedding_dim,
             h_dim=h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            team_embedding_dim=self.team_embedding_dim,
+            pos_embedding_dim=self.pos_embedding_dim
         )
 
         real_classifier_dims = [h_dim, mlp_dim, 1]
@@ -599,7 +620,7 @@ class TrajectoryDiscriminator(nn.Module):
         Output:
         - scores: Tensor of shape (batch,) with real/fake scores
         """
-        final_h = self.encoder(traj_rel)
+        final_h = self.encoder(traj_rel, team, pos)
         # Note: In case of 'global' option we are using start_pos as opposed to
         # end_pos. The intuition being that hidden state has the whole
         # trajectory and relative position at the start when combined with

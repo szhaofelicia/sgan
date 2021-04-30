@@ -21,7 +21,8 @@ def isfloat(value):
 
 def seq_collate(data):
     (obs_seq_list, pred_seq_list, obs_seq_rel_list, pred_seq_rel_list,
-     obs_team_vec_list, obs_pos_vec_list,non_linear_ped_list, loss_mask_list) = zip(*data)
+     obs_team_vec_list, obs_pos_vec_list, pred_team_vec_list, pred_pos_vec_list,
+     non_linear_ped_list, loss_mask_list) = zip(*data)
 
     _len = [len(seq) for seq in obs_seq_list]
     cum_start_idx = [0] + np.cumsum(_len).tolist()
@@ -37,13 +38,16 @@ def seq_collate(data):
 
     obs_team_vec = torch.cat(obs_team_vec_list, dim=0).permute(2, 0, 1)
     obs_pos_vec = torch.cat(obs_pos_vec_list, dim=0).permute(2, 0, 1)
+    pred_team_vec = torch.cat(pred_team_vec_list, dim=0).permute(2, 0, 1)
+    pred_pos_vec = torch.cat(pred_pos_vec_list, dim=0).permute(2, 0, 1)
 
     non_linear_ped = torch.cat(non_linear_ped_list)
     loss_mask = torch.cat(loss_mask_list, dim=0)
     seq_start_end = torch.LongTensor(seq_start_end)
     out = [
         obs_traj, pred_traj, obs_traj_rel, pred_traj_rel,
-        obs_team_vec, obs_pos_vec,non_linear_ped, loss_mask, seq_start_end
+        obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
+        non_linear_ped, loss_mask, seq_start_end
     ]
 
     return tuple(out)
@@ -262,6 +266,11 @@ class TrajectoryDataset(Dataset):
         self.obs_pos_vec = torch.from_numpy(
             pos_vec_list[:, :, :self.obs_len]).type(torch.float)
 
+        self.obs_team_vec_pred = torch.from_numpy(
+            team_vec_list[:, :, self.obs_len:]).type(torch.float)
+        self.obs_pos_vec_pred = torch.from_numpy(
+            pos_vec_list[:, :, self.obs_len:]).type(torch.float)
+
         self.loss_mask = torch.from_numpy(loss_mask_list).type(torch.float)
         self.non_linear_ped = torch.from_numpy(non_linear_ped).type(torch.float)
         cum_start_idx = [0] + np.cumsum(num_peds_in_seq).tolist()
@@ -280,6 +289,7 @@ class TrajectoryDataset(Dataset):
             self.obs_traj[start:end, :], self.pred_traj[start:end, :],
             self.obs_traj_rel[start:end, :], self.pred_traj_rel[start:end, :],
             self.obs_team_vec[start:end, :], self.obs_pos_vec[start:end, :],
+            self.obs_team_vec_pred[start: end, :], self.obs_pos_vec_pred[start: end, :],
             self.non_linear_ped[start:end], self.loss_mask[start:end, :]
         ]
         return out

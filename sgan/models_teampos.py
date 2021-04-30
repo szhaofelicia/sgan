@@ -370,13 +370,15 @@ class TrajectoryGenerator(nn.Module):
         decoder_h_dim=128, mlp_dim=1024, num_layers=1, noise_dim=(0, ),
         noise_type='gaussian', noise_mix_type='ped', pooling_type=None,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8
+        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
+            team_embedding_dim=16, pos_embedding_dim=32
     ):
         super(TrajectoryGenerator, self).__init__()
 
         if pooling_type and pooling_type.lower() == 'none':
             pooling_type = None
-
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.mlp_dim = mlp_dim
@@ -397,7 +399,9 @@ class TrajectoryGenerator(nn.Module):
             h_dim=encoder_h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            team_embedding_dim=self.team_embedding_dim,
+            pos_embedding_dim=self.pos_embedding_dim
         )
 
         self.decoder = Decoder(
@@ -564,7 +568,7 @@ class TrajectoryDiscriminator(nn.Module):
     def __init__(
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
         num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
-        d_type='local'
+        d_type='local', team_embedding_dim=16, pos_embedding_dim=32
     ):
         super(TrajectoryDiscriminator, self).__init__()
 
@@ -580,7 +584,9 @@ class TrajectoryDiscriminator(nn.Module):
             h_dim=h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            team_embedding_dim=self.team_embedding_dim,
+            pos_embedding_dim=self.pos_embedding_dim
         )
 
         real_classifier_dims = [h_dim, mlp_dim, 1]

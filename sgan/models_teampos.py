@@ -47,6 +47,7 @@ class Encoder(nn.Module):
         self.team_embedding = nn.Linear(3, team_embedding_dim)
         self.pos_embedding = nn.Linear(4, pos_embedding_dim)
         self.spatial_embedding = nn.Linear(2, embedding_dim)
+        self.dropout = nn.Dropout(p=dropout)
 
     def init_hidden(self, batch):
         return (
@@ -67,6 +68,8 @@ class Encoder(nn.Module):
         obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, 2))
         obs_team_embedding = self.team_embedding(obs_team.reshape(-1, 3))
         obs_pos_embedding = self.pos_embedding(obs_pos.reshape(-1, 4))
+        obs_team_embedding = self.dropout(obs_team_embedding)
+        obs_pos_embedding = self.dropout(obs_pos_embedding)
         obs_traj_embedding = obs_traj_embedding.view(
             -1, batch, self.embedding_dim
         )

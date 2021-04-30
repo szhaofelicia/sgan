@@ -493,14 +493,13 @@ class TrajectoryGenerator(nn.Module):
         else:
             return False
 
-    def forward(self, obs_traj, obs_traj_rel, seq_start_end, obs_team, obs_pos, user_noise=None):
+    def forward(self, obs_traj, obs_traj_rel, seq_start_end, user_noise=None):
         """
         Inputs:
         - obs_traj: Tensor of shape (obs_len, batch, 2)
         - obs_traj_rel: Tensor of shape (obs_len, batch, 2)
         - seq_start_end: A list of tuples which delimit sequences within batch.
         - user_noise: Generally used for inference when you want to see
-        - obs_team, obs_pos: team and pos, but will not be used in this model
         relation between different types of noise and outputs.
         Output:
         - pred_traj_rel: Tensor of shape (self.pred_len, batch, 2)
@@ -590,7 +589,7 @@ class TrajectoryDiscriminator(nn.Module):
                 batch_norm=batch_norm
             )
 
-    def forward(self, traj, traj_rel, team, pos, seq_start_end=None):
+    def forward(self, traj, traj_rel, seq_start_end=None):
         """
         Inputs:
         - traj: Tensor of shape (obs_len + pred_len, batch, 2)

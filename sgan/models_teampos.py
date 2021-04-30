@@ -578,7 +578,8 @@ class TrajectoryDiscriminator(nn.Module):
         self.mlp_dim = mlp_dim
         self.h_dim = h_dim
         self.d_type = d_type
-
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
         self.encoder = Encoder(
             embedding_dim=embedding_dim,
             h_dim=h_dim,

@@ -42,10 +42,10 @@ writer = SummaryWriter()
 time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
 # output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
 
-output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
+output_dir="/scratch/sz2257/sgan_results/{}".format(time_str)
 
 # data_dir='/media/felicia/Data/basketball-partial'
-data_dir='/scratch/sz2257/sgan/basketball-partial'
+# data_dir='/scratch/sz2257/sgan/basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 # Dataset options
 parser.add_argument('--dataset_name', default='01.02.2016.PHX.at.SAC.new', type=str) #default:zara1
-parser.add_argument('--dataset_dir', default=data_dir, type=str)
+parser.add_argument('--dataset_dir', default='/scratch/sz2257/sgan/basketball-partial', type=str)
 parser.add_argument('--delim', default='\t') #default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)

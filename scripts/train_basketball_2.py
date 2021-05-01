@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 # Dataset options
 parser.add_argument('--dataset_name', default='01.02.2016.PHX.at.SAC.new', type=str) #default:zara1
 parser.add_argument('--dataset_dir', default=data_dir, type=str)
-parser.add_argument('--delim', default=',') #default: ' '
+parser.add_argument('--delim', default='\t') #default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
@@ -83,6 +83,12 @@ parser.add_argument('--noise_mix_type', default='global') #default:pred
 parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:0
 parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
+parser.add_argument('--g_steps', default=1, type=int)
+parser.add_argument('--g_steps', default=1, type=int)
+parser.add_argument('--embedding_dim', default=16, type=int) #64
+parser.add_argument('--pos_embedding', default=4, type=int) #default:4
+parser.add_argument('--team_embedding', default=4, type=int) #default:8
+
 
 # Discriminator Options
 parser.add_argument('--d_type', default='local', type=str) #default:'local'
@@ -184,7 +190,10 @@ def main(args):
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
-        batch_norm=args.batch_norm)
+        batch_norm=args.batch_norm,
+        pos_embedding_dim=args.pos_embedding_dim,
+        team_embedding_dim=args.team_embedding,
+    )
     generator.apply(init_weights)
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')

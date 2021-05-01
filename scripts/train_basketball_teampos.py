@@ -390,7 +390,7 @@ def main(args):
                 # checkpoint_path = os.path.join(
                 #     args.output_dir, '{}_with_model_{:06d}.pt'.format(args.checkpoint_name,t)
                 # )
-                checkpoint_path = os.path.join(args.output_dir, '{}_with_mode.pt'.format(args.checkpoint_name))
+                checkpoint_path = os.path.join(args.output_dir, '{}_with_model.pt'.format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 torch.save(checkpoint, checkpoint_path)
                 logger.info('Done.')

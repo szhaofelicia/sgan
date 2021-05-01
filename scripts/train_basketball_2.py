@@ -83,8 +83,6 @@ parser.add_argument('--noise_mix_type', default='global') #default:pred
 parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:0
 parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
-parser.add_argument('--g_steps', default=1, type=int)
-parser.add_argument('--g_steps', default=1, type=int)
 parser.add_argument('--embedding_dim', default=16, type=int) #64
 parser.add_argument('--pos_embedding', default=4, type=int) #default:4
 parser.add_argument('--team_embedding', default=4, type=int) #default:8

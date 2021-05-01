@@ -120,12 +120,12 @@ parser.add_argument('--checkpoint_name', default='basketball_phx_sac')
 parser.add_argument('--checkpoint_start_from', default=None)
 parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
 parser.add_argument('--num_samples_check', default=5000, type=int)
+parser.add_argument("--tb_path", default=writer.get_logdir(), type=str)
 
 # Misc
 parser.add_argument('--use_gpu', default=1, type=int) # 1: use_gpu
 parser.add_argument('--timing', default=0, type=int)
 parser.add_argument('--gpu_num', default="0", type=str)
-
 
 def init_weights(m):
     classname = m.__class__.__name__
@@ -665,6 +665,7 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
     # TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
@@ -674,7 +675,7 @@ if __name__ == '__main__':
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)
     # print(args_file)
-
+    writer = SummaryWriter(args.tb_path)
     main(args)
     writer.flush()
 

@@ -114,6 +114,7 @@ parser.add_argument('--checkpoint_name', default='basketball_phx_sac')
 parser.add_argument('--checkpoint_start_from', default=None)
 parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
 parser.add_argument('--num_samples_check', default=5000, type=int)
+parser.add_argument("--tb_path", default=writer.get_logdir(), type=str)
 
 # Misc
 parser.add_argument('--use_gpu', default=1, type=int) # 1: use_gpu
@@ -656,7 +657,7 @@ if __name__ == '__main__':
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)
-
+    writer = SummaryWriter(args.tb_path)
     # log_path="{}/config.yaml".format(writer.get_logdir())
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)

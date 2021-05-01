@@ -374,7 +374,7 @@ class TrajectoryGenerator(nn.Module):
         noise_type='gaussian', noise_mix_type='ped', pooling_type=None,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
         activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
-            team_embedding_dim=16, pos_embedding_dim=32
+        team_embedding_dim=16, pos_embedding_dim=32
     ):
         super(TrajectoryGenerator, self).__init__()
 

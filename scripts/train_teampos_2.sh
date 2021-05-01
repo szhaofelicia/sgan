@@ -1,6 +1,6 @@
 python /scratch/sz2257/sgan/scripts/train_basketball_2.py  \
   --dataset_name '01.04.2016.TOR.at.CLE-partial' \
-  --dataset_dir ../basketball-partial \
+  --dataset_dir /scratch/sz2257/basketball-partial \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \

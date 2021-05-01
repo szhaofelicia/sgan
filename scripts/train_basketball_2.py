@@ -188,7 +188,7 @@ def main(args):
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
         batch_norm=args.batch_norm,
-        pos_embedding_dim=args.pos_embedding_dim,
+        pos_embedding_dim=args.pos_embedding,
         team_embedding_dim=args.team_embedding,
     )
     generator.apply(init_weights)

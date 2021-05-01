@@ -1,4 +1,4 @@
-python train_basketball_2.py  \
+python scripts/train_basketball_2.py  \
   --dataset_name '01.04.2016.TOR.at.CLE-partial' \
   --dataset_dir ../basketball-partial \
   --delim tab \

@@ -234,6 +234,8 @@ class PoolHiddenNet(nn.Module):
             curr_rel_embedding = self.spatial_embedding(curr_rel_pos)
             mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
             if self.interaction_activation == "attention":
+                print("--000---error")
+                1 / 0
                 att = self.attention(curr_rel_embedding)
                 mlp_h_input = torch.mul(att, mlp_h_input)
 

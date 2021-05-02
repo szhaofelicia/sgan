@@ -69,6 +69,7 @@ parser.add_argument('--num_layers', default=1, type=int)
 parser.add_argument('--dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
+parser.add_argument('--interaction_activation', default="none", type=str)
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
@@ -180,6 +181,7 @@ def main(args):
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
+        interaction_activation=args.interaction_activation,
         batch_norm=args.batch_norm)
     generator.apply(init_weights)
     generator.type(float_dtype).train()
@@ -196,6 +198,7 @@ def main(args):
         dropout=args.dropout,
         batch_norm=args.batch_norm,
         d_type=args.d_type,
+        interaction_activation=args.interaction_activation,
         activation=args.d_activation # default: relu
     )
 

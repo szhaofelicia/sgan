@@ -71,6 +71,7 @@ parser.add_argument('--num_epochs', default=500, type=int)
 parser.add_argument('--embedding_dim', default=16, type=int) #64
 parser.add_argument('--num_layers', default=1, type=int)
 parser.add_argument('--dropout', default=0, type=float)
+parser.add_argument('--tp_dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
 parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
@@ -183,6 +184,7 @@ def main(args):
         pooling_type=args.pooling_type,
         pool_every_timestep=args.pool_every_timestep,
         dropout=args.dropout,
+        tp_dropout=args.tp_dropout,
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
@@ -203,6 +205,7 @@ def main(args):
         mlp_dim=args.mlp_dim,
         num_layers=args.num_layers,
         dropout=args.dropout,
+        tp_dropout=args.tp_dropout,
         batch_norm=args.batch_norm,
         d_type=args.d_type,
         activation=args.d_activation, # default: relu,

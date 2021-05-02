@@ -76,6 +76,7 @@ parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_f
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
 parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
 parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
+parser.add_argument('--interaction_activation', default="none", type=str)
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
@@ -190,7 +191,8 @@ def main(args):
         grid_size=args.grid_size,
         batch_norm=args.batch_norm,
         team_embedding_dim=args.team_embedding_dim,
-        pos_embedding_dim=args.pos_embedding_dim
+        pos_embedding_dim=args.pos_embedding_dim,
+        interaction_activation=args.interaction_activation
     )
     generator.apply(init_weights)
     generator.type(float_dtype).train()
@@ -209,8 +211,9 @@ def main(args):
         batch_norm=args.batch_norm,
         d_type=args.d_type,
         activation=args.d_activation, # default: relu,
-        pos_embedding_dim = args.pos_embedding_dim,
-        team_embedding_dim = args.team_embedding_dim
+        pos_embedding_dim=args.pos_embedding_dim,
+        team_embedding_dim=args.team_embedding_dim,
+        interaction_activation=args.interaction_activation
     )
 
     discriminator.apply(init_weights)

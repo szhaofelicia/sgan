@@ -25,13 +25,9 @@ from sgan.data.loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
-from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
-from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
-from sgan.models_teampos import TrajectoryGenerator,  TrajectoryDiscriminator
-MODELS = {
-    "baseline": (GeneratorBaseline, DiscriminatorBaseline),
-    "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
-}
+from sgan.models import TrajectoryGenerator, TrajectoryDiscriminator
+
+
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
 
@@ -71,11 +67,8 @@ parser.add_argument('--num_epochs', default=500, type=int)
 parser.add_argument('--embedding_dim', default=16, type=int) #64
 parser.add_argument('--num_layers', default=1, type=int)
 parser.add_argument('--dropout', default=0, type=float)
-parser.add_argument('--tp_dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
-parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
-parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
 parser.add_argument('--interaction_activation', default="none", type=str)
 
 # Generator Options
@@ -129,6 +122,7 @@ parser.add_argument('--use_gpu', default=1, type=int) # 1: use_gpu
 parser.add_argument('--timing', default=0, type=int)
 parser.add_argument('--gpu_num', default="0", type=str)
 
+
 def init_weights(m):
     classname = m.__class__.__name__
     if classname.find('Linear') != -1:
@@ -143,8 +137,7 @@ def get_dtypes(args):
         float_dtype = torch.cuda.FloatTensor
     return long_dtype, float_dtype
 
-# TrajectoryDiscriminator = None
-# TrajectoryGenerator = None
+
 def main(args):
     print(args)
     if not os.path.exists(args.output_dir):
@@ -185,15 +178,11 @@ def main(args):
         pooling_type=args.pooling_type,
         pool_every_timestep=args.pool_every_timestep,
         dropout=args.dropout,
-        tp_dropout=args.tp_dropout,
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
-        batch_norm=args.batch_norm,
-        team_embedding_dim=args.team_embedding_dim,
-        pos_embedding_dim=args.pos_embedding_dim,
-        interaction_activation=args.interaction_activation
-    )
+        interaction_activation=args.interaction_activation,
+        batch_norm=args.batch_norm)
     generator.apply(init_weights)
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')
@@ -207,13 +196,10 @@ def main(args):
         mlp_dim=args.mlp_dim,
         num_layers=args.num_layers,
         dropout=args.dropout,
-        tp_dropout=args.tp_dropout,
         batch_norm=args.batch_norm,
         d_type=args.d_type,
-        activation=args.d_activation, # default: relu,
-        pos_embedding_dim=args.pos_embedding_dim,
-        team_embedding_dim=args.team_embedding_dim,
-        interaction_activation=args.interaction_activation
+        interaction_activation=args.interaction_activation,
+        activation=args.d_activation # default: relu
     )
 
     discriminator.apply(init_weights)
@@ -671,17 +657,15 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-
-    # TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)
-
+    writer = SummaryWriter(args.tb_path)
     # log_path="{}/config.yaml".format(writer.get_logdir())
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)
     # print(args_file)
-    writer = SummaryWriter(args.tb_path)
+
     main(args)
     writer.flush()
 

@@ -197,8 +197,10 @@ def main(args):
         pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation
     )
+
     generator.apply(init_weights)
     generator.type(float_dtype).train()
+    generator = generator.cuda()
     logger.info('Here is the generator:')
     logger.info(generator)
 
@@ -221,6 +223,7 @@ def main(args):
 
     discriminator.apply(init_weights)
     discriminator.type(float_dtype).train()
+    discriminator = discriminator.cuda()
     logger.info('Here is the discriminator:')
     logger.info(discriminator)
 

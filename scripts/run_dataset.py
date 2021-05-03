@@ -10,6 +10,8 @@ from sgan.data.loader import data_loader
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
 data_dir='/media/felicia/Data/basketball-partial'
+# data_dir='/media/felicia/Data/nba2016'
+
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'
@@ -17,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format=FORMAT, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 # Dataset options
-parser.add_argument('--dataset_name', default='01.02.2016.DEN.at.GSW', type=str)  # default:zara1
+parser.add_argument('--dataset_name', default='01.04.2016.TOR.at.CLE-partial', type=str)  # default:zara1
 parser.add_argument('--delim', default='\t')  # default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
@@ -88,22 +90,32 @@ parser.add_argument('--gpu_num', default="0", type=str)
 args = parser.parse_args()
 
 tmp_path= os.path.join(data_dir,'01.02.2016.DEN.at.GSW','tmp') # 200 files:0-199
+# tmp_path= os.path.join(data_dir,args.dataset_name,'train_sample') #
 tmp_dset, tmp_loader = data_loader(args, tmp_path)
 
 
-traj_max=[]
+dataset_len=len(tmp_dset)
+print(dataset_len)
+iterations_per_epoch = dataset_len / 128 / args.d_steps
+if args.num_epochs:
+    args.num_iterations = int(iterations_per_epoch * args.num_epochs)
 
-for batch in tmp_loader:
-    # batch = [tensor.cuda() for tensor in batch]
-    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
-     obs_team_vec, obs_pos_vec,non_linear_ped, loss_mask, seq_start_end) = batch
-    # print(obs_traj.shape) # (obs_len, batch, 32
-    # print(obs_team_vec.shape) # (obs_len, batch, 3)
-    # print(obs_pos_vec.shape) # (obs_len, batch, 4)
-    # print(obs_traj.shape)
+print(iterations_per_epoch)
+print(args.num_iterations)
 
-    tmp=torch.max(torch.flatten(obs_traj))
-    traj_max.append(tmp)
+# traj_max=[]
 
-xy_max=max(traj_max)
-print(xy_max)
+# for batch in tmp_loader:
+#     # batch = [tensor.cuda() for tensor in batch]
+#     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+#      obs_team_vec, obs_pos_vec,non_linear_ped, loss_mask, seq_start_end) = batch
+#     # print(obs_traj.shape) # (obs_len, batch, 32
+#     # print(obs_team_vec.shape) # (obs_len, batch, 3)
+#     # print(obs_pos_vec.shape) # (obs_len, batch, 4)
+#     # print(obs_traj.shape)
+#
+#     # tmp=torch.max(torch.flatten(obs_traj))
+#     # traj_max.append(tmp)
+#
+# # xy_max=max(traj_max)
+# # print(xy_max)

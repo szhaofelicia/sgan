@@ -44,7 +44,7 @@ time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
 
 output_dir="/scratch/sz2257/sgan_results/{}".format(time_str)
 
-# data_dir='/media/felicia/Data/basketball-partial'
+data_dir='/media/felicia/Data/basketball-partial'
 # data_dir='/scratch/sz2257/sgan/basketball-partial'
 
 parser = argparse.ArgumentParser()
@@ -165,6 +165,9 @@ def main(args):
     iterations_per_epoch = len(train_dset) / args.batch_size / args.d_steps
     if args.num_epochs:
         args.num_iterations = int(iterations_per_epoch * args.num_epochs)
+
+
+
 
     logger.info(
         'There are {} iterations per epoch'.format(iterations_per_epoch)

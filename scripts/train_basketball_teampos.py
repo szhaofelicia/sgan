@@ -25,13 +25,15 @@ from sgan.data.loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
-from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
-from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
+# from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
+# from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
 from sgan.models_teampos import TrajectoryGenerator,  TrajectoryDiscriminator
-MODELS = {
-    "baseline": (GeneratorBaseline, DiscriminatorBaseline),
-    "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
-}
+# MODELS = {
+#     "baseline": (GeneratorBaseline, DiscriminatorBaseline),
+#     "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
+# }
+
+
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
 

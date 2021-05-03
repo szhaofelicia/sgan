@@ -1,5 +1,6 @@
-python /scratch/sz2257/sgan/scripts/train_basketball_2.py  \
+python /scratch/sz2257/sgan/scripts/train_basketball_teampos.py  \
   --dataset_name '01.04.2016.TOR.at.CLE-partial' \
+  --dataset_dir /scratch/sz2257/basketball-partial \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \
@@ -17,7 +18,8 @@ python /scratch/sz2257/sgan/scripts/train_basketball_2.py  \
   --pool_every_timestep 0 \
   --l2_loss_weight 1 \
   --batch_norm 0 \
-  --dropout 0.5 \
+  --dropout 0 \
+  --tp_dropout 0.5 \
   --batch_size 128 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
@@ -31,7 +33,7 @@ python /scratch/sz2257/sgan/scripts/train_basketball_2.py  \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
   --checkpoint_name 'basketball_tor_cle' \
-  --restore_from_checkpoint 0
+  --restore_from_checkpoint 0 \
+  --interaction_activation none
 
-#  --output_dir ../sgan_results \
-#  --dataset_dir /scratch/sz2257/basketball-partial \
+#  --output_dir ./results \

@@ -42,12 +42,12 @@ torch.backends.cudnn.benchmark = True
 writer = SummaryWriter()
 
 time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
-# output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
 
-output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
+# output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
+output_dir="/scratch/sz2257/sgan_results/{}".format(time_str)
 
 # data_dir='/media/felicia/Data/basketball-partial'
-data_dir='/scratch/sz2257/sgan/basketball-partial'
+data_dir='/scratch/sz2257/basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'

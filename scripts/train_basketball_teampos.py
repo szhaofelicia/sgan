@@ -90,11 +90,13 @@ parser.add_argument('--noise_mix_type', default='global') #default:pred
 parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:0
 parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
+parser.add_argument('--g_gamma', default=0.8, type=float) #default:5e-4, 0.001
 
 # Discriminator Options
 parser.add_argument('--d_type', default='local', type=str) #default:'local'
 parser.add_argument('--encoder_h_dim_d', default=64, type=int) #default:64
 parser.add_argument('--d_learning_rate', default=1e-3, type=float) #default:5e-4, 0.001
+parser.add_argument('--d_gamma', default=0.8, type=float) #default:5e-4, 0.001
 parser.add_argument('--d_steps', default=2, type=int) #default:2
 parser.add_argument('--clipping_threshold_d', default=0, type=float)
 parser.add_argument('--d_activation', default='relu', type=str) # 'relu'
@@ -234,7 +236,8 @@ def main(args):
     optimizer_d = optim.Adam(
         discriminator.parameters(), lr=args.d_learning_rate
     )
-
+    scheduler_g = optim.lr_scheduler.MultiStepLR(optimizer_g, milestones=[10, 50], gamma=args.g_gamma)
+    scheduler_d = optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=[10, 50], gamma=args.d_gamma)
     # Maybe restore from checkpoint
     restore_path = None
     if args.checkpoint_start_from is not None:
@@ -289,6 +292,9 @@ def main(args):
         g_steps_left = args.g_steps
         epoch += 1
         logger.info('Starting epoch {}'.format(epoch))
+        scheduler_g.step()
+        scheduler_d.step()
+
         for batch in train_loader:
             if args.timing == 1:
                 torch.cuda.synchronize()

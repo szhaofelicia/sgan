@@ -34,7 +34,7 @@ python /scratch/sz2257/sgan/scripts/train_basketball_teampos.py  \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
   --interaction_activation none \
-  --checkpoint_name team_pos_v5.0.d5.e16.pe16.te4.tpd5 \
+  --checkpoint_name team_pos_lstm \
   --restore_from_checkpoint 0
 
 #  --output_dir ../sgan_results \

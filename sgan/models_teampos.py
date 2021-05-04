@@ -92,7 +92,8 @@ class Decoder(nn.Module):
         self, seq_len, embedding_dim=64, h_dim=128, mlp_dim=1024, num_layers=1,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
         activation='relu', batch_norm=True, pooling_type='pool_net',
-        neighborhood_size=2.0, grid_size=8, interaction_activation="none"
+        neighborhood_size=2.0, grid_size=8, interaction_activation="none",
+        team_embedding_dim=16, pos_embedding_dim=32, tp_dropout=0.0
     ):
         super(Decoder, self).__init__()
 
@@ -100,6 +101,9 @@ class Decoder(nn.Module):
         self.mlp_dim = mlp_dim
         self.h_dim = h_dim
         self.embedding_dim = embedding_dim
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
+        self.tp_dropout = tp_dropout
         self.pool_every_timestep = pool_every_timestep
 
         self.decoder = nn.LSTM(
@@ -116,7 +120,10 @@ class Decoder(nn.Module):
                     activation=activation,
                     batch_norm=batch_norm,
                     dropout=dropout,
-                    interaction_activation=interaction_activation
+                    interaction_activation=interaction_activation,
+                    team_embedding_dim=team_embedding_dim,
+                    pos_embedding_dim=pos_embedding_dim,
+                    tp_dropout=tp_dropout
                 )
             elif pooling_type == 'spool':
                 self.pool_net = SocialPooling(
@@ -139,7 +146,7 @@ class Decoder(nn.Module):
         self.spatial_embedding = nn.Linear(2, embedding_dim)
         self.hidden2pos = nn.Linear(h_dim, 2)
 
-    def forward(self, last_pos, last_pos_rel, state_tuple, seq_start_end):
+    def forward(self, last_pos, last_pos_rel, state_tuple, seq_start_end, last_teams, last_roles):
         """
         Inputs:
         - last_pos: Tensor of shape (batch, 2)
@@ -161,7 +168,7 @@ class Decoder(nn.Module):
 
             if self.pool_every_timestep:
                 decoder_h = state_tuple[0]
-                pool_h = self.pool_net(decoder_h, seq_start_end, curr_pos)
+                pool_h = self.pool_net(decoder_h, seq_start_end, curr_pos, last_teams, last_roles)
                 decoder_h = torch.cat(
                     [decoder_h.view(-1, self.h_dim), pool_h], dim=1)
                 decoder_h = self.mlp(decoder_h)
@@ -183,7 +190,8 @@ class PoolHiddenNet(nn.Module):
     """Pooling module as proposed in our paper"""
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, dropout=0.0, interaction_activation="none"
+        activation='relu', batch_norm=True, dropout=0.0, interaction_activation="none",
+        team_embedding_dim=4, pos_embedding_dim=16, tp_dropout=0
     ):
         super(PoolHiddenNet, self).__init__()
 
@@ -191,20 +199,41 @@ class PoolHiddenNet(nn.Module):
         self.h_dim = h_dim
         self.bottleneck_dim = bottleneck_dim
         self.embedding_dim = embedding_dim
+        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim
+        # self.tp_dropout = tp_dropout
 
         mlp_pre_dim = embedding_dim + h_dim
         mlp_pre_pool_dims = [mlp_pre_dim, 512, bottleneck_dim]
 
         self.spatial_embedding = nn.Linear(2, embedding_dim)
+        self.team_embedding = nn.Linear(3, team_embedding_dim)
+        self.role_embedding = nn.Linear(4, pos_embedding_dim)
+        self.dropout = nn.Dropout(p=dropout)
+        self.tp_dropout = nn.Dropout(p=tp_dropout)
         self.mlp_pre_pool = make_mlp(
             mlp_pre_pool_dims,
             activation=activation,
             batch_norm=batch_norm,
             dropout=dropout)
         self.interaction_activation = interaction_activation
-        if interaction_activation == "attention":
+        if interaction_activation == "attentiontp":
             self.attention = make_mlp(
-                [self.embedding_dim, self.h_dim + self.embedding_dim],
+                [self.embedding_dim + self.pos_embedding_dim + self.team_embedding_dim, self.h_dim + self.embedding_dim + self.pos_embedding_dim + self.team_embedding_dim],
+                batch_norm=batch_norm,
+                dropout=dropout
+            )
+            mlp_pre_dim = embedding_dim + h_dim + self.pos_embedding_dim + self.team_embedding_dim
+            mlp_pre_pool_dims = [mlp_pre_dim, 512, bottleneck_dim]
+            self.mlp_pre_pool = make_mlp(
+                mlp_pre_pool_dims,
+                activation=activation,
+                batch_norm=batch_norm,
+                dropout=dropout)
+        elif interaction_activation == "attention":
+            self.attention = make_mlp(
+                [self.embedding_dim,
+                 self.h_dim + self.embedding_dim],
                 batch_norm=batch_norm,
                 dropout=dropout
             )
@@ -221,12 +250,14 @@ class PoolHiddenNet(nn.Module):
         tensor = tensor.view(-1, col_len)
         return tensor
 
-    def forward(self, h_states, seq_start_end, end_pos):
+    def forward(self, h_states, seq_start_end, end_pos, end_teams, end_roles):
         """
         Inputs:
         - h_states: Tensor of shape (num_layers, batch, h_dim)
         - seq_start_end: A list of tuples which delimit sequences within batch
         - end_pos: Tensor of shape (batch, 2)
+        - end_teams: Tensor of shape (batch, 3)
+        - end_roles: Tensor of shape (batch, 4)
         Output:
         - pool_h: Tensor of shape (batch, bottleneck_dim)
         """
@@ -245,10 +276,33 @@ class PoolHiddenNet(nn.Module):
             curr_end_pos_2 = self.repeat(curr_end_pos, num_ped)
             curr_rel_pos = curr_end_pos_1 - curr_end_pos_2
             curr_rel_embedding = self.spatial_embedding(curr_rel_pos)
+
+
+            # role and team
+            curr_roles = end_roles[start: end]
+            curr_teams = end_teams[start: end]
+            curr_roles_embedding = self.role_embedding(curr_roles)
+            curr_teams_embedding = self.team_embedding(curr_teams)
+            curr_rt_embedding = torch.cat([curr_teams_embedding, curr_roles_embedding], dim=1)
+
+            # RT1, RT2, RT1, RT2
+            curr_rte_1 = curr_rt_embedding.repeat(num_ped, 1)
+
+            # RT1, RT1, RT2, RT2
+            curr_rte_2 = self.repeat(curr_rt_embedding, num_ped)
+            curr_rel_rt = curr_rte_1 - curr_rte_2
+
+            curr_rel_embedding_with_rt = torch.cat([curr_rel_embedding, curr_rel_rt], dim=1)
             mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
-            if self.interaction_activation == "attention":
+            if self.interaction_activation == "attentiontp":
+                mlp_h_input = torch.cat([curr_rel_embedding_with_rt, curr_hidden_1], dim=1)
+                att = self.attention(curr_rel_embedding_with_rt)
+                mlp_h_input = torch.mul(att, mlp_h_input)
+            elif self.interaction_activation == "attention":
+                mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
                 att = self.attention(curr_rel_embedding)
                 mlp_h_input = torch.mul(att, mlp_h_input)
+
             curr_pool_h = self.mlp_pre_pool(mlp_h_input)
             curr_pool_h = curr_pool_h.view(num_ped, num_ped, -1).max(1)[0]
             pool_h.append(curr_pool_h)
@@ -542,9 +596,12 @@ class TrajectoryGenerator(nn.Module):
         # Encode seq
         final_encoder_h = self.encoder(obs_traj_rel, obs_team, obs_pos)
         # Pool States
+        end_teams = obs_team[-1, :, :]
+        end_roles = obs_team[-1, :, :]
         if self.pooling_type:
             end_pos = obs_traj[-1, :, :]
-            pool_h = self.pool_net(final_encoder_h, seq_start_end, end_pos)
+
+            pool_h = self.pool_net(final_encoder_h, seq_start_end, end_pos, end_teams, end_roles)
             # Construct input hidden states for decoder
             mlp_decoder_context_input = torch.cat(
                 [final_encoder_h.view(-1, self.encoder_h_dim), pool_h], dim=1)
@@ -575,6 +632,8 @@ class TrajectoryGenerator(nn.Module):
             last_pos_rel,
             state_tuple,
             seq_start_end,
+            end_teams,
+            end_roles
         )
         pred_traj_fake_rel, final_decoder_h = decoder_out
 
@@ -642,11 +701,13 @@ class TrajectoryDiscriminator(nn.Module):
         # end_pos. The intuition being that hidden state has the whole
         # trajectory and relative position at the start when combined with
         # trajectory information should help in discriminative behavior.
+        end_teams = team[-1, :, :]
+        end_roles = pos[-1, :, :]
         if self.d_type == 'local':
             classifier_input = final_h.squeeze()
         else:
             classifier_input = self.pool_net(
-                final_h.squeeze(), seq_start_end, traj[0]
+                final_h.squeeze(), seq_start_end, traj[0], end_teams, end_roles
             )
         scores = self.real_classifier(classifier_input)
         return scores

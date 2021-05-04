@@ -63,7 +63,8 @@ parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 parser.add_argument('--metric', default="meter", type=str)
-parser.add_argument("--model", default="baseline", type=str)
+parser.add_argument("--model", default="team_pos", type=str)
+
 # Optimization
 parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000

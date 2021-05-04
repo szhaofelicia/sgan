@@ -281,22 +281,19 @@ class PoolHiddenNet(nn.Module):
             # role and team
             curr_roles = end_roles[start: end]
             curr_teams = end_teams[start: end]
-            print(curr_roles.shape)
-            print(end_roles.shape)
+
             curr_roles_embedding = self.role_embedding(curr_roles)
             curr_roles_embedding = self.tp_dropout(curr_roles_embedding)
 
             curr_teams_embedding = self.team_embedding(curr_teams)
             curr_teams_embedding = self.tp_dropout(curr_teams_embedding)
             curr_rt_embedding = torch.cat([curr_teams_embedding, curr_roles_embedding], dim=1)
-
             # RT1, RT2, RT1, RT2
             curr_rte_1 = curr_rt_embedding.repeat(num_ped, 1)
 
             # RT1, RT1, RT2, RT2
             curr_rte_2 = self.repeat(curr_rt_embedding, num_ped)
             curr_rel_rt = curr_rte_1 - curr_rte_2
-
             curr_rel_embedding_with_rt = torch.cat([curr_rel_embedding, curr_rel_rt], dim=1)
             mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
             if self.interaction_activation == "attentiontp":
@@ -602,7 +599,7 @@ class TrajectoryGenerator(nn.Module):
         final_encoder_h = self.encoder(obs_traj_rel, obs_team, obs_pos)
         # Pool States
         end_teams = obs_team[-1, :, :]
-        end_roles = obs_team[-1, :, :]
+        end_roles = obs_pos[-1, :, :]
         if self.pooling_type:
             end_pos = obs_traj[-1, :, :]
 

@@ -281,6 +281,8 @@ class PoolHiddenNet(nn.Module):
             # role and team
             curr_roles = end_roles[start: end]
             curr_teams = end_teams[start: end]
+            print(curr_roles.shape)
+            print(end_roles.shape)
             curr_roles_embedding = self.role_embedding(curr_roles)
             curr_roles_embedding = self.tp_dropout(curr_roles_embedding)
 

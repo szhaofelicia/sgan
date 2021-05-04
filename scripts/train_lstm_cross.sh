@@ -1,40 +1,40 @@
 python /scratch/sz2257/sgan/scripts/train_basketball_teampos.py  \
-  --model team_pos \
-  --dataset_name 'nba-cross.10' \
+  --dataset_name 'nba-cross.s05' \
   --dataset_dir /scratch/sz2257/basketball-partial \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \
-  --encoder_h_dim_g 16 \
-  --encoder_h_dim_d 16 \
+  --encoder_h_dim_g 32 \
+  --encoder_h_dim_d 64 \
   --decoder_h_dim 32 \
   --embedding_dim 16 \
-  --team_embedding_dim 4 \
-  --pos_embedding_dim 16 \
   --bottleneck_dim 32 \
   --mlp_dim 128 \
+  --pos_embedding 16 \
+  --team_embedding 4 \
   --num_layers 1 \
   --noise_type gaussian \
   --noise_mix_type global \
   --pool_every_timestep 0 \
   --l2_loss_weight 1 \
   --batch_norm 0 \
-  --dropout 0.5 \
-  --tp_dropout 0.5 \
-  --batch_size 65 \
+  --dropout 0 \
+  --tp_dropout 0 \
+  --batch_size 128 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
   --d_learning_rate 1e-3 \
   --d_steps 2 \
   --checkpoint_every 10 \
   --print_every 50 \
-  --num_iterations 40000 \
-  --num_epochs 1500 \
+  --num_iterations 20000 \
+  --num_epochs 150 \
   --pooling_type 'none' \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
+  --checkpoint_name 'basketball_lstm_cross' \
+  --restore_from_checkpoint 0 \
   --interaction_activation none \
-  --checkpoint_name team_pos_lstm \
-  --restore_from_checkpoint 0
+  --model baseline
 
-#  --output_dir ../sgan_results \
+#  --output_dir ./results \

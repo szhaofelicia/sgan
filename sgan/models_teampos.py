@@ -282,7 +282,10 @@ class PoolHiddenNet(nn.Module):
             curr_roles = end_roles[start: end]
             curr_teams = end_teams[start: end]
             curr_roles_embedding = self.role_embedding(curr_roles)
+            curr_roles_embedding = self.tp_dropout(curr_roles_embedding)
+
             curr_teams_embedding = self.team_embedding(curr_teams)
+            curr_teams_embedding = self.tp_dropout(curr_teams_embedding)
             curr_rt_embedding = torch.cat([curr_teams_embedding, curr_roles_embedding], dim=1)
 
             # RT1, RT2, RT1, RT2

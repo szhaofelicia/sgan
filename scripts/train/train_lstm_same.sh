@@ -21,7 +21,7 @@ python /scratch/sz2257/sgan/scripts/train_basketball_teampos.py  \
   --batch_norm 0 \
   --dropout 0.5 \
   --tp_dropout 0.5 \
-  --batch_size 65 \
+  --batch_size 64 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
   --d_learning_rate 1e-3 \

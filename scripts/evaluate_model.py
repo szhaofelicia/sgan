@@ -10,16 +10,16 @@ from sgan.utils import relative_to_abs, get_dset_path
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
 # from sgan.models import TrajectoryGenerator
-# from sgan.models_linear import TrajectoryLinearRegressor
-from sgan.models_teampos import TrajectoryGenerator
+from sgan.models_linear import TrajectoryLinearRegressor
+# from sgan.models_teampos import TrajectoryGenerator
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str,
-                    default="/media/felicia/Data/sgan_results/models/Cross-Match.05/Team_Pos")  # default:"models/sgan-models"
-parser.add_argument('--num_samples', default=1, type=int)  # N=20
+                    default="/media/felicia/Data/sgan_results/models/linear")  # default:"models/sgan-models"
+parser.add_argument('--num_samples', default=20, type=int)  # N=20
 parser.add_argument('--dset_type', default='test_sample', type=str)
-parser.add_argument('--dataset_name', default='01.04.2016.TOR.at.CLE-partial', type=str)  # 'nba-cross.s05','01.04.2016.TOR.at.CLE-partial'
+# parser.add_argument('--dataset_name', default='01.04.2016.TOR.at.CLE-partial', type=str)  # 'nba-cross.s05','01.04.2016.TOR.at.CLE-partial'
 parser.add_argument('--dataset_dir', default='/media/felicia/Data/basketball-partial', type=str)
 
 # # Dataset options
@@ -86,50 +86,49 @@ parser.add_argument('--dataset_dir', default='/media/felicia/Data/basketball-par
 
 def get_generator(checkpoint):
     args = AttrDict(checkpoint['args'])
-    print(checkpoint['g_state'].keys())
 
     args.dataset_dir='/media/felicia/Data/basketball-partial'
 
-    generator = TrajectoryGenerator(
-        obs_len=args.obs_len,
-        pred_len=args.pred_len,
-        embedding_dim=args.embedding_dim,
-        encoder_h_dim=args.encoder_h_dim_g,
-        decoder_h_dim=args.decoder_h_dim_g,
-        mlp_dim=args.mlp_dim,
-        num_layers=args.num_layers,
-        noise_dim=args.noise_dim,
-        noise_type=args.noise_type,
-        noise_mix_type=args.noise_mix_type,
-        pooling_type=args.pooling_type,
-        pool_every_timestep=args.pool_every_timestep,
-        dropout=args.dropout,
-        tp_dropout=args.tp_dropout,
-        bottleneck_dim=args.bottleneck_dim,
-        neighborhood_size=args.neighborhood_size,
-        grid_size=args.grid_size,
-        batch_norm=args.batch_norm,
-        team_embedding_dim=args.team_embedding_dim,
-        pos_embedding_dim=args.pos_embedding_dim,
-        interaction_activation=args.interaction_activation
-    )
-    generator.load_state_dict(checkpoint['g_state'])
-    generator.cuda()
-    generator.train()
-    return generator
-
-    # regressor = TrajectoryLinearRegressor(
+    # generator = TrajectoryGenerator(
     #     obs_len=args.obs_len,
     #     pred_len=args.pred_len,
     #     embedding_dim=args.embedding_dim,
+    #     encoder_h_dim=args.encoder_h_dim_g,
+    #     decoder_h_dim=args.decoder_h_dim_g,
     #     mlp_dim=args.mlp_dim,
+    #     num_layers=args.num_layers,
+    #     noise_dim=args.noise_dim,
+    #     noise_type=args.noise_type,
+    #     noise_mix_type=args.noise_mix_type,
+    #     pooling_type=args.pooling_type,
+    #     pool_every_timestep=args.pool_every_timestep,
     #     dropout=args.dropout,
+    #     tp_dropout=args.tp_dropout,
+    #     bottleneck_dim=args.bottleneck_dim,
+    #     neighborhood_size=args.neighborhood_size,
+    #     grid_size=args.grid_size,
     #     batch_norm=args.batch_norm,
+    #     team_embedding_dim=args.team_embedding_dim,
+    #     pos_embedding_dim=args.pos_embedding_dim,
+    #     interaction_activation=args.interaction_activation
     # )
-    # regressor.load_state_dict(checkpoint['r_state'])
-    # regressor.cuda()
-    # regressor.train()
-    # return regressor
+    # generator.load_state_dict(checkpoint['g_state'])
+    # generator.cuda()
+    # generator.train()
+    # return generator
+
+    regressor = TrajectoryLinearRegressor(
+        obs_len=args.obs_len,
+        pred_len=args.pred_len,
+        embedding_dim=args.embedding_dim,
+        mlp_dim=args.mlp_dim,
+        dropout=args.dropout,
+        batch_norm=args.batch_norm,
+    )
+    regressor.load_state_dict(checkpoint['r_state'])
+    regressor.cuda()
+    regressor.train()
+    return regressor
 
 
 def evaluate_helper(error, seq_start_end):
@@ -163,8 +162,8 @@ def evaluate(args, loader, generator, num_samples):
             total_traj += pred_traj_gt.size(1)
 
             for _ in range(num_samples):
-                # pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end) #regressor
-                pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec) # generator
+                pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end) #regressor
+                # pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec) # generator
 
                 pred_traj_fake = relative_to_abs(
                     pred_traj_fake_rel, obs_traj[-1]
@@ -204,7 +203,6 @@ def evaluate(args, loader, generator, num_samples):
 
 
 def main(args):
-    print(args)
     if os.path.isdir(args.model_path):
         filenames = os.listdir(args.model_path)
         filenames.sort()
@@ -222,13 +220,15 @@ def main(args):
         generator = get_generator(checkpoint)
         _args = AttrDict(checkpoint['args'])
 
+        print(_args.dataset_name)
+
         # if _args.dataset_name=="zara1":
         #     for k in _args:
         #         print(k,_args[k])
 
         # path = get_dset_path(_args.dataset_name, args.dset_type)
 
-        path = os.path.join(args.dataset_dir, args.dataset_name, 'test_sample')  # 10 files:0-9
+        path = os.path.join(args.dataset_dir, _args.dataset_name, 'test_sample')  # 10 files:0-9
         _, loader = data_loader(_args, path)
         ade, fde = evaluate(_args, loader, generator, args.num_samples)
         print('Dataset: {}, Pred Len: {}, ADE: {:.2f}, FDE: {:.2f}'.format(
@@ -239,18 +239,13 @@ def main(args):
 
 if __name__ == '__main__':
 
-
     args = parser.parse_args()
-
+    print(args)
     main(args)
 
 
 """
 source env/bin/activate 
 ipython scripts/evaluate_model.py 
-
-
-AttrDict({'dataset_name': 'nba-cross.s05', 'dataset_dir': '/scratch/gw2145/data/nba', 'delim': 'tab', 'loader_num_workers': 4, 'obs_len': 8, 'pred_len': 8, 'skip': 1, 'metric': 'meter', 'model': 'team_pos', 'batch_size': 128, 'num_iterations': 75240, 'num_epochs': 500, 'embedding_dim': 16, 'num_layers': 1, 'dropout': 0.0, 'tp_dropout': 0.5, 'batch_norm': False, 'mlp_dim': 128, 'team_embedding_dim': 4, 'pos_embedding_dim': 16, 'interaction_activation': 'attention', 'encoder_h_dim_g': 32, 'decoder_h_dim_g': 32, 'noise_dim': (8,), 'noise_type': 'gaussian', 'noise_mix_type': 'global', 'clipping_threshold_g': 1.5, 'g_learning_rate': 0.001, 'g_steps': 1, 'g_gamma': 1.0, 'd_type': 'local', 'encoder_h_dim_d': 64, 'd_learning_rate': 0.001, 'd_gamma': 1.0, 'd_steps': 2, 'clipping_threshold_d': 0, 'd_activation': 'relu', 'pooling_type': 'pool_net', 'pool_every_timestep': False, 'bottleneck_dim': 32, 'neighborhood_size': 2.0, 'grid_size': 8, 'l2_loss_weight': 1.0, 'best_k': 10, 'l2_loss_mode': 'raw', 'output_dir': './cross.s05/results', 'print_every': 50, 'checkpoint_every': 10, 'checkpoint_name': 'cs05.team_pos_attention_v3.6.d0.e16.pe16.te4.tpd5.gg10.dg10.l10', 'checkpoint_start_from': None, 'restore_from_checkpoint': 0, 'num_samples_check': 5000, 'tb_path': 'runs/May04_12-48-59_gr004.nyu.cluster', 'use_gpu': 1, 'timing': 0, 'gpu_num': '0'})
-
 
 """

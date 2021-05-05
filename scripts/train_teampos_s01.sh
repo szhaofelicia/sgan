@@ -1,6 +1,6 @@
 python train_basketball_teampos.py  \
   --model team_pos \
-  --dataset_name 'nba-cross.s05' \
+  --dataset_name 'nba-cross.s01' \
   --dataset_dir /home/jnzs1836/Code/baseball-analysis/datasets \
   --output_dir ./results \
   --delim tab \
@@ -22,7 +22,7 @@ python train_basketball_teampos.py  \
   --batch_norm 1 \
   --dropout 0 \
   --tp_dropout 0.5 \
-  --batch_size 128 \
+  --batch_size 32 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
   --d_learning_rate 1e-3 \
@@ -34,8 +34,8 @@ python train_basketball_teampos.py  \
   --pooling_type 'pool_net' \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
-  --g_gamma 0.5 \
-  --d_gamma 0.5 \
+  --g_gamma 0.8 \
+  --d_gamma 0.8 \
   --interaction_activation none \
-  --checkpoint_name cs05.team_pos_attentiontp_v3.6.d0.e16.pe16.te4.tpd5.gg5.dg5.l10.bn \
+  --checkpoint_name cs01.team_pos_attentiontp_v3.6.d0.e16.pe16.te4.tpd5.gg8.dg8.l10.bn.b32 \
   --restore_from_checkpoint 0

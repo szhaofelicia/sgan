@@ -9,17 +9,18 @@ from sgan.losses import displacement_error, final_displacement_error
 from sgan.utils import relative_to_abs, get_dset_path
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
+# from sgan.models_linear import TrajectoryLinearRegressor
+
 # from sgan.models import TrajectoryGenerator
-from sgan.models_linear import TrajectoryLinearRegressor
-# from sgan.models_teampos import TrajectoryGenerator
+# from sgan.models_old import TrajectoryGenerator
+from sgan.models_teampos import TrajectoryGenerator
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str,
-                    default="/media/felicia/Data/sgan_results/models/linear")  # default:"models/sgan-models"
-parser.add_argument('--num_samples', default=20, type=int)  # N=20
+                    default="/media/felicia/Data/sgan_results/models/Cross-Match.05/Team_Pos_With_Attention")  # default:"models/sgan-models"
+parser.add_argument('--num_samples', default=1, type=int)  # N=20
 parser.add_argument('--dset_type', default='test_sample', type=str)
-# parser.add_argument('--dataset_name', default='01.04.2016.TOR.at.CLE-partial', type=str)  # 'nba-cross.s05','01.04.2016.TOR.at.CLE-partial'
 parser.add_argument('--dataset_dir', default='/media/felicia/Data/basketball-partial', type=str)
 
 # # Dataset options
@@ -89,46 +90,46 @@ def get_generator(checkpoint):
 
     args.dataset_dir='/media/felicia/Data/basketball-partial'
 
-    # generator = TrajectoryGenerator(
-    #     obs_len=args.obs_len,
-    #     pred_len=args.pred_len,
-    #     embedding_dim=args.embedding_dim,
-    #     encoder_h_dim=args.encoder_h_dim_g,
-    #     decoder_h_dim=args.decoder_h_dim_g,
-    #     mlp_dim=args.mlp_dim,
-    #     num_layers=args.num_layers,
-    #     noise_dim=args.noise_dim,
-    #     noise_type=args.noise_type,
-    #     noise_mix_type=args.noise_mix_type,
-    #     pooling_type=args.pooling_type,
-    #     pool_every_timestep=args.pool_every_timestep,
-    #     dropout=args.dropout,
-    #     tp_dropout=args.tp_dropout,
-    #     bottleneck_dim=args.bottleneck_dim,
-    #     neighborhood_size=args.neighborhood_size,
-    #     grid_size=args.grid_size,
-    #     batch_norm=args.batch_norm,
-    #     team_embedding_dim=args.team_embedding_dim,
-    #     pos_embedding_dim=args.pos_embedding_dim,
-    #     interaction_activation=args.interaction_activation
-    # )
-    # generator.load_state_dict(checkpoint['g_state'])
-    # generator.cuda()
-    # generator.train()
-    # return generator
-
-    regressor = TrajectoryLinearRegressor(
+    generator = TrajectoryGenerator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
         embedding_dim=args.embedding_dim,
+        encoder_h_dim=args.encoder_h_dim_g,
+        decoder_h_dim=args.decoder_h_dim_g,
         mlp_dim=args.mlp_dim,
+        num_layers=args.num_layers,
+        noise_dim=args.noise_dim,
+        noise_type=args.noise_type,
+        noise_mix_type=args.noise_mix_type,
+        pooling_type=args.pooling_type,
+        pool_every_timestep=args.pool_every_timestep,
         dropout=args.dropout,
+        tp_dropout=args.tp_dropout,
+        bottleneck_dim=args.bottleneck_dim,
+        neighborhood_size=args.neighborhood_size,
+        grid_size=args.grid_size,
         batch_norm=args.batch_norm,
+        team_embedding_dim=args.team_embedding_dim,
+        pos_embedding_dim=args.pos_embedding_dim,
+        interaction_activation=args.interaction_activation
     )
-    regressor.load_state_dict(checkpoint['r_state'])
-    regressor.cuda()
-    regressor.train()
-    return regressor
+    generator.load_state_dict(checkpoint['g_state'])
+    generator.cuda()
+    generator.train()
+    return generator
+
+    # regressor = TrajectoryLinearRegressor(
+    #     obs_len=args.obs_len,
+    #     pred_len=args.pred_len,
+    #     embedding_dim=args.embedding_dim,
+    #     mlp_dim=args.mlp_dim,
+    #     dropout=args.dropout,
+    #     batch_norm=args.batch_norm,
+    # )
+    # regressor.load_state_dict(checkpoint['r_state'])
+    # regressor.cuda()
+    # regressor.train()
+    # return regressor
 
 
 def evaluate_helper(error, seq_start_end):
@@ -162,8 +163,8 @@ def evaluate(args, loader, generator, num_samples):
             total_traj += pred_traj_gt.size(1)
 
             for _ in range(num_samples):
-                pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end) #regressor
-                # pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec) # generator
+                # pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end) #regressor
+                pred_traj_fake_rel = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec) # generator
 
                 pred_traj_fake = relative_to_abs(
                     pred_traj_fake_rel, obs_traj[-1]

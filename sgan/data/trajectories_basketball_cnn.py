@@ -284,6 +284,7 @@ class TrajectoryDataset(Dataset):
             agent = agent.permute(1, 0)
             channel = self.drawer.generate_channel(agent)
             channels.append(channel)
+        channels = np.array(channels)
         self.image_channels = torch.from_numpy(channels)
 
 

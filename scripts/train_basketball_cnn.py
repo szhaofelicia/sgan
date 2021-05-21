@@ -270,6 +270,11 @@ def main(args):
         scheduler_g.step()
         scheduler_d.step()
         for batch in train_loader:
+            _bsize = batch[0].size(1) 
+            # print(_bsize)
+            if _bsize != 11 * args.batch_size:
+                # print("continue", batch[0].size())
+                continue
             if args.timing == 1:
                 torch.cuda.synchronize()
                 t1 = time.time()

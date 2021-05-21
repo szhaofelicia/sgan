@@ -155,11 +155,11 @@ def main(args):
     logger.info("Initializing train dataset")
     train_dset, train_loader = data_loader(args, train_path)
     logger.info("Initializing val dataset")
-    _, val_loader = data_loader(args, val_path)
+    val_dset, val_loader = data_loader(args, val_path)
     torch.save(
         {
-            "train_image_channels": train_loader.image_channels,
-            "valid_image_channels": val_loader.image_channels,
+            "train_image_channels": train_dset.image_channels,
+            "valid_image_channels": val_dset.image_channels,
         },
         args.image_path
     )

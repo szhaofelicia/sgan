@@ -154,9 +154,9 @@ def main(args):
     long_dtype, float_dtype = get_dtypes(args)
     channel_tensor = torch.load(args.image_path)
     logger.info("Initializing train dataset")
-    train_dset, train_loader = data_loader(args, train_path, channel_tensor['train'])
+    train_dset, train_loader = data_loader(args, train_path, channel_tensor['train_image_channels'])
     logger.info("Initializing val dataset")
-    _, val_loader = data_loader(args, val_path, channel_tensor['valid'])
+    _, val_loader = data_loader(args, val_path, channel_tensor['valid_image_channels'])
 
     iterations_per_epoch = len(train_dset) / args.batch_size / args.d_steps
     if args.num_epochs:

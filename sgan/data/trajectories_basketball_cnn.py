@@ -279,7 +279,7 @@ class TrajectoryDataset(Dataset):
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
         channels = []
-        for i in tqdm(range(self.obs_traj[:300, :,:].size(0)), desc="drawing trajectory"):
+        for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
             agent = self.obs_traj[i, :, :]
             agent = agent.permute(1, 0)
             channel = self.drawer.generate_channel(agent)

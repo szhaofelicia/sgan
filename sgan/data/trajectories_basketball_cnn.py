@@ -282,7 +282,7 @@ class TrajectoryDataset(Dataset):
         ]
         channels = []
         if image_channels != None:
-            self.image_channels = image_channels
+            self.image_channels = image_channels.float()
         else:
             for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
                 agent = self.obs_traj[i, :, :]

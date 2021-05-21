@@ -150,7 +150,7 @@ def main(args):
     # val_path = get_dset_path(args.dataset_name, 'val')
     train_path= os.path.join(args.dataset_dir,args.dataset_name,'train_sample') # 10 files:0-9
     val_path= os.path.join(args.dataset_dir,args.dataset_name,'val_sample') # 5 files: 10-14
-
+    
     long_dtype, float_dtype = get_dtypes(args)
     channel_tensor = torch.load(args.image_path)
     logger.info("Initializing train dataset")

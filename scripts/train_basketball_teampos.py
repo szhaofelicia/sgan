@@ -27,7 +27,7 @@ from sgan.losses import displacement_error, final_displacement_error
 
 # from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
 # from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
-from sgan.models_teampos import TrajectoryGenerator,  TrajectoryDiscriminator
+from sgan.models_old import TrajectoryGenerator,  TrajectoryDiscriminator
 # MODELS = {
 #     "baseline": (GeneratorBaseline, DiscriminatorBaseline),
 #     "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
@@ -79,7 +79,7 @@ parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_f
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
 parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
 parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
-parser.add_argument('--interaction_activation', default="none", type=str)
+parser.add_argument('--interaction_activation', default="none", type=str) # none, attention,attentiontp
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64

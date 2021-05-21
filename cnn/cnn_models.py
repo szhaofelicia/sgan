@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 from sgan.models import Encoder, Decoder, get_noise
-
+from .drawer import TrajectoryDrawer
+from .attention import ImageAttentionLayer
 
 class CNNTrajectoryGenerator(nn.Module):
     def __init__(self, obs_len=12, pred_len=8, embedding_dim=64, encoder_h_dim=32, decoder_h_dim=32,

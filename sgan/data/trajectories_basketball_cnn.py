@@ -43,7 +43,7 @@ def seq_collate(data):
 
     non_linear_ped = torch.cat(non_linear_ped_list)
     loss_mask = torch.cat(loss_mask_list, dim=0)
-    channels = torch.cat(channel_list, dim=0)
+    channels = torch.cat(channel_list, dim=0).float()
     print(channels.shape)
     seq_start_end = torch.LongTensor(seq_start_end)
     out = [
@@ -282,7 +282,7 @@ class TrajectoryDataset(Dataset):
         ]
         channels = []
         if image_channels != None:
-            self.image_channels = image_channels.float()
+            self.image_channels = image_channels
         else:
             for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
                 agent = self.obs_traj[i, :, :]

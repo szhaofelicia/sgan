@@ -548,6 +548,9 @@ def check_accuracy(
     with torch.no_grad():
         for batch in loader:
             batch = [tensor.cuda() for tensor in batch]
+            _bsize = batch[0].size(1)
+            if _bsize != args.batch_size * 11:
+                continue
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
              non_linear_ped, loss_mask, seq_start_end) = batch

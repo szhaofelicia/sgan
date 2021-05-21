@@ -279,9 +279,9 @@ class TrajectoryDataset(Dataset):
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
         channels = []
-        for i in tqdm(range(self.obs_traj.size(0))):
+        for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
             agent = self.obs_traj[i, :, :]
-            agent = agent.permue(1, 0)
+            agent = agent.permute(1, 0)
             channel = self.drawer.generate_channel(agent)
             channels.append(channel)
         self.image_channels = torch.from_numpy(channels)

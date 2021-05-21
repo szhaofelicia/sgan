@@ -98,12 +98,13 @@ class CNNTrajectoryGenerator(nn.Module):
 
         return decoder_h
 
-    def forward(self, obs_traj, obs_traj_rel, seq_start_end, obs_team, obs_pos, user_noise=None, ):
+    def forward(self, obs_traj, obs_traj_rel, seq_start_end, obs_team, obs_pos, user_noise=None, images=None):
         batch_size = obs_traj_rel.size(1) // 11
-        images = self.image_drawer.generate_batch_images(obs_traj.cpu())
-        images = images.cuda()
-        images.requires_grad = False
-
+        if images == None:
+            images = self.image_drawer.generate_batch_images(obs_traj.cpu())
+            images = images.cuda()
+            images.requires_grad = False
+        images = images.view(batch_size, 11, 224, 224)
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)
         final_encoder_h = self.encoder(obs_traj_rel)

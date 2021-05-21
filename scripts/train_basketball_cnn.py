@@ -21,7 +21,7 @@ import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
-from sgan.data.loader import data_loader
+from sgan.data.image_loader import image_data_loader as data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 # Dataset options
 parser.add_argument('--dataset_name', default='01.02.2016.PHX.at.SAC.new', type=str) #default:zara1
 parser.add_argument('--dataset_dir', default=data_dir, type=str)
+parser.add_argument('--image_path', default="./images/cross.05.pt", type=str)
 parser.add_argument('--delim', default=',') #default: ' '
 parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
@@ -58,6 +59,7 @@ parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 parser.add_argument('--metric', default="meter", type=str)
 parser.add_argument("--model", default="baseline", type=str)
+
 # Optimization
 parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
@@ -150,11 +152,11 @@ def main(args):
     val_path= os.path.join(args.dataset_dir,args.dataset_name,'val_sample') # 5 files: 10-14
 
     long_dtype, float_dtype = get_dtypes(args)
-
+    channel_tensor = torch.load(args.image_path)
     logger.info("Initializing train dataset")
-    train_dset, train_loader = data_loader(args, train_path)
+    train_dset, train_loader = data_loader(args, train_path, channel_tensor['train'])
     logger.info("Initializing val dataset")
-    _, val_loader = data_loader(args, val_path)
+    _, val_loader = data_loader(args, val_path, channel_tensor['valid'])
 
     iterations_per_epoch = len(train_dset) / args.batch_size / args.d_steps
     if args.num_epochs:
@@ -431,11 +433,11 @@ def discriminator_step(
     batch = [tensor.cuda() for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
      obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
-     non_linear_ped, loss_mask, seq_start_end) = batch
+     non_linear_ped, loss_mask, seq_start_end, image_channels) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
 
-    generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec)
+    generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec, images=image_channels)
 
     pred_traj_fake_rel = generator_out
     pred_traj_fake = relative_to_abs(pred_traj_fake_rel, obs_traj[-1])
@@ -478,7 +480,7 @@ def generator_step(
     batch = [tensor.cuda() for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
      obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
-     non_linear_ped, loss_mask, seq_start_end) = batch
+     non_linear_ped, loss_mask, seq_start_end, image_channels) = batch
     losses = {}
     loss = torch.zeros(1).to(pred_traj_gt)
     g_l2_loss_rel = []
@@ -486,7 +488,7 @@ def generator_step(
     loss_mask = loss_mask[:, args.obs_len:]
 
     for _ in range(args.best_k):
-        generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec)
+        generator_out = generator(obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec, images=image_channels)
 
 
         pred_traj_fake_rel = generator_out
@@ -553,12 +555,12 @@ def check_accuracy(
                 continue
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
-             non_linear_ped, loss_mask, seq_start_end) = batch
+             non_linear_ped, loss_mask, seq_start_end, image_channels) = batch
             linear_ped = 1 - non_linear_ped
             loss_mask = loss_mask[:, args.obs_len:]
 
             pred_traj_fake_rel = generator(
-                obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec
+                obs_traj, obs_traj_rel, seq_start_end, obs_team_vec, obs_pos_vec, images=image_channels
             )
             pred_traj_fake = relative_to_abs(pred_traj_fake_rel, obs_traj[-1])
 

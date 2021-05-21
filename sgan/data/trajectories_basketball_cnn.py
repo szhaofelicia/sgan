@@ -22,7 +22,7 @@ def isfloat(value):
 def seq_collate(data):
     (obs_seq_list, pred_seq_list, obs_seq_rel_list, pred_seq_rel_list,
      obs_team_vec_list, obs_pos_vec_list, pred_team_vec_list, pred_pos_vec_list,
-     non_linear_ped_list, loss_mask_list) = zip(*data)
+     non_linear_ped_list, loss_mask_list, channel_list) = zip(*data)
 
     _len = [len(seq) for seq in obs_seq_list]
     cum_start_idx = [0] + np.cumsum(_len).tolist()
@@ -43,11 +43,13 @@ def seq_collate(data):
 
     non_linear_ped = torch.cat(non_linear_ped_list)
     loss_mask = torch.cat(loss_mask_list, dim=0)
+    channels = torch.cat(channel_list, dim=0)
+    print(channels.shape)
     seq_start_end = torch.LongTensor(seq_start_end)
     out = [
         obs_traj, pred_traj, obs_traj_rel, pred_traj_rel,
         obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
-        non_linear_ped, loss_mask, seq_start_end
+        non_linear_ped, loss_mask, seq_start_end, channels
     ]
 
     return tuple(out)
@@ -130,7 +132,7 @@ class TrajectoryDataset(Dataset):
 
     def __init__(
             self, data_dir, obs_len=8, pred_len=12, skip=1, threshold=0.002,
-            min_ped=1, delim='\t', metric="meter"
+            min_ped=1, delim='\t', metric="meter", image_channels=None
     ):
         """
         Args:
@@ -279,13 +281,16 @@ class TrajectoryDataset(Dataset):
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
         channels = []
-        for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
-            agent = self.obs_traj[i, :, :]
-            agent = agent.permute(1, 0)
-            channel = self.drawer.generate_channel(agent)
-            channels.append(channel)
-        channels = np.array(channels)
-        self.image_channels = torch.from_numpy(channels)
+        if image_channels != None:
+            self.image_channels = image_channels
+        else:
+            for i in tqdm(range(self.obs_traj.size(0)), desc="drawing trajectory"):
+                agent = self.obs_traj[i, :, :]
+                agent = agent.permute(1, 0)
+                channel = self.drawer.generate_channel(agent)
+                channels.append(channel)
+            channels = np.array(channels)
+            self.image_channels = torch.from_numpy(channels)
 
 
     def __len__(self):
@@ -298,6 +303,7 @@ class TrajectoryDataset(Dataset):
             self.obs_traj_rel[start:end, :], self.pred_traj_rel[start:end, :],
             self.obs_team_vec[start:end, :], self.obs_pos_vec[start:end, :],
             self.obs_team_vec_pred[start: end, :], self.obs_pos_vec_pred[start: end, :],
-            self.non_linear_ped[start:end], self.loss_mask[start:end, :]
+            self.non_linear_ped[start:end], self.loss_mask[start:end, :],
+            self.image_channels[start:end]
         ]
         return out

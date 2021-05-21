@@ -63,3 +63,10 @@ class TrajectoryDrawer:
         batch_images = torch.Tensor(batch_images)
         batch_images = batch_images.permute(0, 3, 1, 2)
         return batch_images
+
+    def generate_channel(self, agent):
+        agent_image = np.zeros((self.sampling_resolution[1], self.sampling_resolution[0]), np.uint8)
+        print(agent.size())
+        channel = self.generate_trajectory_image(agent, agent_image)
+        channel = np.array(channel)
+        return channel

@@ -159,7 +159,7 @@ class TrajectoryDataset(Dataset):
         self.skip = skip
         self.seq_len = self.obs_len + self.pred_len
         self.delim = delim
-
+        self.drawer = TrajectoryDrawer(target_size=[224, 224])
         if metric=="meter":
             self.factor=0.3048 # foot to meter
         else:
@@ -278,7 +278,13 @@ class TrajectoryDataset(Dataset):
             (start, end)
             for start, end in zip(cum_start_idx, cum_start_idx[1:])
         ]
-        print(self.obs_traj.size())
+        channels = []
+        for i in tqdm(range(self.obs_traj.size(0))):
+            agent = self.obs_traj[i, :, :]
+            agent = agent.permue(1, 0)
+            channel = self.drawer.generate_channel(agent)
+            channels.append(channel)
+        self.image_channels = torch.from_numpy(channels)
 
 
     def __len__(self):

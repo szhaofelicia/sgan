@@ -18,7 +18,8 @@ from sgan.models_teampos import TrajectoryGenerator
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str,
-                    default="/media/felicia/Data/sgan_results/models/Cross-Match.05/Team_Pos_With_Attention")  # default:"models/sgan-models"
+                    default="/media/felicia/Data/sgan_results/models/Single-Match/Team_Pos_With_TP_Attention/models")  # default:"models/sgan-models"
+# default = "/media/felicia/Data/sgan_results/May03_03-05-44/model")  # default:"models/sgan-models"
 parser.add_argument('--num_samples', default=1, type=int)  # N=20
 parser.add_argument('--dset_type', default='test_sample', type=str)
 parser.add_argument('--dataset_dir', default='/media/felicia/Data/basketball-partial', type=str)
@@ -113,7 +114,8 @@ def get_generator(checkpoint):
         pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation
     )
-    generator.load_state_dict(checkpoint['g_state'])
+    # generator.load_state_dict(checkpoint['g_state'])
+    generator.load_state_dict(checkpoint['g_best_state'])
     generator.cuda()
     generator.train()
     return generator

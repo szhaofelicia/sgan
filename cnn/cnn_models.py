@@ -120,7 +120,11 @@ class CNNTrajectoryGenerator(nn.Module):
         h = pad_hiddens
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)
-        spatial = self.to_spatial(h).view(batch_size * 11, -1)
+        print(h.size())
+        packed_h = torch.zeros(hiddens.size(0), h.size(-1))
+        for i, start_end in enumerate(seq_start_end):
+            packed_h[start_end[0]: start_end[1], :] = h[i, start_end[1]-start_end[0], :]
+        spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)
         spatial = spatial.view(-1, self.pred_len, 2)
         spatial = spatial.permute(1, 0, 2)
         #         mlp_decoder_context_input = final_encoder_h.view(

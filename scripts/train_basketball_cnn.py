@@ -83,6 +83,13 @@ parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:
 parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
 parser.add_argument('--g_gamma', default=0.8, type=float) #default:5e-4, 0.001
+
+# Attention
+parser.add_argument("--n_head", default=16, type=int)
+parser.add_argument("--decoder_inner_dim", default=128, type=int)
+parser.add_argument("--attention_key_dim", default=16, type=int)
+parser.add_argument("--attention_value_dim", default=16, type=int)
+parser.add_argument("--attention_layer_num", default=2, type=int)
 # Discriminator Options
 parser.add_argument('--d_type', default='local', type=str) #default:'local'
 parser.add_argument('--encoder_h_dim_d', default=64, type=int) #default:64
@@ -178,7 +185,12 @@ def main(args):
         noise_type=args.noise_type,
         noise_mix_type=args.noise_mix_type,
         dropout=args.dropout,
-        batch_norm=args.batch_norm
+        batch_norm=args.batch_norm,
+        key_dim=args.attention_key_dim,
+        value_dim=args.attention_value_dim,
+        attention_layer_num=args.attention_layer_num,
+        decoder_inner_dim=args.decoder_inner_dim,
+        n_head=args.n_head
     )
     generator.apply(init_weights)
     generator.type(float_dtype).train()

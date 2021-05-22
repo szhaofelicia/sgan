@@ -85,6 +85,7 @@ parser.add_argument('--g_steps', default=1, type=int)
 parser.add_argument('--g_gamma', default=0.8, type=float) #default:5e-4, 0.001
 
 # Attention
+parser.add_argument("--image_pretrained", default=False, type=bool_flag)
 parser.add_argument("--n_head", default=16, type=int)
 parser.add_argument("--decoder_inner_dim", default=128, type=int)
 parser.add_argument("--attention_key_dim", default=16, type=int)
@@ -190,7 +191,8 @@ def main(args):
         value_dim=args.attention_value_dim,
         attention_layer_num=args.attention_layer_num,
         decoder_inner_dim=args.decoder_inner_dim,
-        n_head=args.n_head
+        n_head=args.n_head,
+        image_pretrained=args.image_pretrained
     )
     generator.apply(init_weights)
     generator.type(float_dtype).train()

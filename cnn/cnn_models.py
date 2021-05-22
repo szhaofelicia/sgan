@@ -9,7 +9,7 @@ from .attention import ImageAttentionLayer
 class CNNTrajectoryGenerator(nn.Module):
     def __init__(self, obs_len=12, pred_len=8, embedding_dim=64, encoder_h_dim=32, decoder_h_dim=32,
                  mlp_dim=64, num_layers=1, dropout=0.5, batch_norm=True,
-                 noise_dim=(0,), noise_type='gaussian',
+                 noise_dim=(0,), noise_type='gaussian', image_pretrained=False,
                  noise_mix_type='ped', attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128):
         super(CNNTrajectoryGenerator, self).__init__()
         self.obs_len = obs_len
@@ -18,7 +18,7 @@ class CNNTrajectoryGenerator(nn.Module):
         self.batch_norm = batch_norm
         self.image_drawer = TrajectoryDrawer(target_size=[224, 224])
 
-        self.image_feature_extractor = self._make_image_feature_extractor()
+        self.image_feature_extractor = self._make_image_feature_extractor(pretrained=image_pretrained)
         self.encoder = Encoder(
             embedding_dim=embedding_dim,
             h_dim=encoder_h_dim,
@@ -55,8 +55,8 @@ class CNNTrajectoryGenerator(nn.Module):
     #             pooling_type=pooling_type,
     #             grid_size=grid_size,
     #             neighborhood_size=neighborhood_size,)
-    def _make_image_feature_extractor(self):
-        resnet = models.resnet18()
+    def _make_image_feature_extractor(self, pretrained=False):
+        resnet = models.resnet18(pretrained=pretrained)
         conv1 = nn.Conv2d(11, 64, kernel_size=7, stride=2, padding=3,
                           bias=False)
         module_list = list(resnet.children())

@@ -99,7 +99,7 @@ class CNNTrajectoryGenerator(nn.Module):
         return decoder_h
 
     def forward(self, obs_traj, obs_traj_rel, seq_start_end, obs_team, obs_pos, user_noise=None, images=None):
-        batch_size = obs_traj_rel.size(1) // 11
+        batch_size = len(seq_start_end)
         if images == None:
             images = self.image_drawer.generate_batch_images(obs_traj.cpu())
             images = images.cuda()
@@ -120,10 +120,9 @@ class CNNTrajectoryGenerator(nn.Module):
         h = pad_hiddens
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)
-        print(h.size())
         packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
         for i, start_end in enumerate(seq_start_end):
-            packed_h[start_end[0]: start_end[1], :] = h[i, start_end[1]-start_end[0], :]
+            packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
         spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)
         spatial = spatial.view(-1, self.pred_len, 2)
         spatial = spatial.permute(1, 0, 2)

@@ -274,9 +274,9 @@ def main(args):
         for batch in train_loader:
             _bsize = batch[0].size(1) 
             # print(_bsize)
-            if _bsize != 11 * args.batch_size:
-                # print("continue", batch[0].size())
-                continue
+            # if _bsize != 11 * args.batch_size:
+            #    # print("continue", batch[0].size())
+            #    continue
             if args.timing == 1:
                 torch.cuda.synchronize()
                 t1 = time.time()
@@ -551,8 +551,8 @@ def check_accuracy(
         for batch in loader:
             batch = [tensor.cuda() for tensor in batch]
             _bsize = batch[0].size(1)
-            if _bsize != args.batch_size * 11:
-                continue
+            # if _bsize != args.batch_size * 11:
+            #    continue
             (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
              obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
              non_linear_ped, loss_mask, seq_start_end, image_channels) = batch

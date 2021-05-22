@@ -104,17 +104,22 @@ class CNNTrajectoryGenerator(nn.Module):
             images = self.image_drawer.generate_batch_images(obs_traj.cpu())
             images = images.cuda()
             images.requires_grad = False
-        for start_end in seq_start_end:
-            print(start_end)
+        pad_images = torch.zeros(batch_size, 11, 224, 224)
+        for i, start_end in enumerate(seq_start_end):
+            pad_images[i, 0:start_end[1] - start_end[0], :, :] = images[start_end[0]:start_end[1], :, :]
+        images = pad_images
         images = images.view(batch_size, 11, 224, 224)
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)
         final_encoder_h = self.encoder(obs_traj_rel)
         hiddens = torch.squeeze(final_encoder_h)
-        hiddens = hiddens.view(batch_size, 11, -1)
-
+        # hiddens = hiddens.view(batch_size, 11, -1)
+        pad_hiddens = torch.zeros(batch_size, 11, hiddens.size(-1))
+        for i, start_end in enumerate(seq_start_end):
+            pad_hiddens[i, 0:start_end[1] - start_end[0], :] = hiddens[start_end[0]:start_end[1], :]
+        h = pad_hiddens
         for attention_layer in self.attentions:
-            _, h = attention_layer(image_features, hiddens)
+            _, h = attention_layer(image_features, h)
         spatial = self.to_spatial(h).view(batch_size * 11, -1)
         spatial = spatial.view(-1, self.pred_len, 2)
         spatial = spatial.permute(1, 0, 2)

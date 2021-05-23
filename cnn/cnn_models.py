@@ -138,7 +138,7 @@ class CNNTrajectoryGenerator(nn.Module):
         print(l)
 
         batch_boolean = [False for i in range(h.size(0) * h.size(1))]
-        for i in h.size(0):
+        for i in range(h.size(0)):
             t = l[i]
             for j in range(t):
                 batch_boolean[i * h.size(1) + j] = True

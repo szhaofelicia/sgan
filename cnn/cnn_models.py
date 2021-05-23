@@ -122,7 +122,7 @@ class CNNTrajectoryGenerator(nn.Module):
         for i, start_end in enumerate(seq_start_end):
             hiddens_list.append(hiddens[start_end[0]:start_end[1], :])
 
-        pad_hiddens = pad_sequence(hiddens_list)
+        pad_hiddens = torch.nn.utils.rnn.pad_sequence(hiddens_list)
         print(pad_hiddens.size())
         # hiddens = hiddens.view(batch_size, 11, -1)
         # pad_hiddens = torch.rand(batch_size, 11, hiddens.size(-1)).cuda()

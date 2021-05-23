@@ -134,8 +134,9 @@ class CNNTrajectoryGenerator(nn.Module):
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)
         # packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
+
         packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True)
-        print(packed_h.size())
+        print(packed_h.data.size())
         # for i, start_end in enumerate(seq_start_end):
         #     packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
         spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)

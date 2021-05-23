@@ -137,6 +137,9 @@ class CNNTrajectoryGenerator(nn.Module):
 
         packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True, enforce_sorted=False)
         print(packed_h.data.size())
+        print(packed_h.sorted_indices)
+        print(packed_h.batch_sizes)
+        # packed_h = packed_h.data
         # for i, start_end in enumerate(seq_start_end):
         #     packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
         spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)

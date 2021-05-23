@@ -125,7 +125,7 @@ class CNNTrajectoryGenerator(nn.Module):
             l.append(start_end[1] - start_end[0])
         pad_hiddens = torch.nn.utils.rnn.pad_sequence(hiddens_list)
         pad_hiddens = pad_hiddens.permute(1, 0, 2)
-        print(pad_hiddens.size())
+        # print(pad_hiddens.size())
         # hiddens = hiddens.view(batch_size, 11, -1)
         # pad_hiddens = torch.rand(batch_size, 11, hiddens.size(-1)).cuda()
         # pad_hiddens = torch.zeros(batch_size, 11, hiddens.size(-1)).cuda()
@@ -135,7 +135,7 @@ class CNNTrajectoryGenerator(nn.Module):
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)
         # packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
-        print(l)
+        # print(l)
 
         batch_boolean = [False for i in range(h.size(0) * h.size(1))]
         for i in range(h.size(0)):
@@ -143,9 +143,9 @@ class CNNTrajectoryGenerator(nn.Module):
             for j in range(t):
                 batch_boolean[i * h.size(1) + j] = True
         h = h.view(-1, h.size(-1))
-        print(h.size())
+        # print(h.size())
         h = h[batch_boolean]
-        print(h.size())
+        # print(h.size())
         packed_h = h
         # packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True, enforce_sorted=False)
         # print(packed_h.data.size())

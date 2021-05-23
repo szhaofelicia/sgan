@@ -119,9 +119,10 @@ class CNNTrajectoryGenerator(nn.Module):
         hiddens = torch.squeeze(final_encoder_h)
 
         hiddens_list = []
+        l = []
         for i, start_end in enumerate(seq_start_end):
             hiddens_list.append(hiddens[start_end[0]:start_end[1], :])
-
+            l.append(start_end[1] - start_end[0])
         pad_hiddens = torch.nn.utils.rnn.pad_sequence(hiddens_list)
         pad_hiddens = pad_hiddens.permute(1, 0, 2)
         # hiddens = hiddens.view(batch_size, 11, -1)
@@ -132,9 +133,11 @@ class CNNTrajectoryGenerator(nn.Module):
         h = pad_hiddens
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)
-        packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
-        for i, start_end in enumerate(seq_start_end):
-            packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
+        # packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
+        packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True)
+        print(packed_h.size())
+        # for i, start_end in enumerate(seq_start_end):
+        #     packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
         spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)
         spatial = spatial.view(-1, self.pred_len, 2)
         spatial = spatial.permute(1, 0, 2)

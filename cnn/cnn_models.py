@@ -37,6 +37,7 @@ class CNNTrajectoryGenerator(nn.Module):
         self.n_head = n_head
         self.key_dim = key_dim
         self.value_dim = value_dim
+        self.debug_mlp = nn.Linear(2*self.obs_len, encoder_h_dim)
         self.attentions = nn.ModuleList(
             [ImageAttentionLayer(d_inner=decoder_inner_dim, key_dim=key_dim, value_dim=value_dim, n_head=n_head, hidden_dim=encoder_h_dim, image_dim=512, dropout=dropout) for i in range(attention_layer_num)])
         self.to_spatial = nn.Linear(encoder_h_dim, 2 * pred_len)
@@ -115,7 +116,10 @@ class CNNTrajectoryGenerator(nn.Module):
         images = images.view(batch_size, 11, 224, 224)
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)
-        final_encoder_h = self.encoder(obs_traj_rel)
+        traj = obs_traj_rel.permute(1, 0, 2)
+        traj = traj.view(traj.size(0), -1)
+        final_encoder_h = self.debug_mlp(traj)
+        # final_encoder_h = self.encoder(obs_traj_rel)
         hiddens = torch.squeeze(final_encoder_h)
 
         hiddens_list = []

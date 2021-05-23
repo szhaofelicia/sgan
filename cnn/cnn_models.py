@@ -118,9 +118,10 @@ class CNNTrajectoryGenerator(nn.Module):
         final_encoder_h = self.encoder(obs_traj_rel)
         hiddens = torch.squeeze(final_encoder_h)
         # hiddens = hiddens.view(batch_size, 11, -1)
-        pad_hiddens = torch.zeros(batch_size, 11, hiddens.size(-1)).cuda()
-        for i, start_end in enumerate(seq_start_end):
-            pad_hiddens[i, 0:start_end[1] - start_end[0], :] = hiddens[start_end[0]:start_end[1], :]
+        pad_hiddens = torch.rand(batch_size, 11, hiddens.size(-1)).cuda()
+        # pad_hiddens = torch.zeros(batch_size, 11, hiddens.size(-1)).cuda()
+        # for i, start_end in enumerate(seq_start_end):
+        #     pad_hiddens[i, 0:start_end[1] - start_end[0], :] = hiddens[start_end[0]:start_end[1], :]
         h = pad_hiddens
         for attention_layer in self.attentions:
             _, h = attention_layer(image_features, h)

@@ -118,13 +118,14 @@ class CNNTrajectoryGenerator(nn.Module):
         image_features = torch.squeeze(image_features)
         traj = obs_traj_rel.permute(1, 0, 2)
         print(traj.size())
-        traj = traj.reshape(-1, self.obs_len * 2)
+        # traj = traj.reshape(-1, self.obs_len * 2)
         traj_list = []
         l = []
         for i, start_end in enumerate(seq_start_end):
-            traj_list.append(obs_traj_rel[start_end[0]:start_end[1], :])
+            traj_list.append(traj[start_end[0]:start_end[1], :, :])
             l.append(start_end[1] - start_end[0])
         pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list)
+        print(pad_traj.size())
         pad_traj = pad_traj.permute(1, 0, 2)
         # final_encoder_h = self.debug_mlp(traj)
         print(pad_traj.size())

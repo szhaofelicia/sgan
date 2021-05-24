@@ -136,7 +136,7 @@ class CNNTrajectoryGenerator(nn.Module):
         # print(pad_traj.size())
         final_encoder_h = self.encoder(pad_traj)
         pad_hiddens = torch.squeeze(final_encoder_h)
-
+        print(pad_hiddens.size())
         # hiddens_list = []
         # l = []
         # for i, start_end in enumerate(seq_start_end):

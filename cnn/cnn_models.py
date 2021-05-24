@@ -117,28 +117,28 @@ class CNNTrajectoryGenerator(nn.Module):
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)
         traj = obs_traj_rel.permute(1, 0, 2)
-        print(traj.size())
+        # print(traj.size())
         # traj = traj.reshape(-1, self.obs_len * 2)
         traj_list = []
         l = []
         for i, start_end in enumerate(seq_start_end):
             traj_list.append(traj[start_end[0]:start_end[1], :, :])
             l.append(start_end[1] - start_end[0])
-        print(len(l))
+        # print(len(l))
         pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list, batch_first=True)
-        print(pad_traj.size())
+        # print(pad_traj.size())
         # pad_traj = pad_traj.permute(1, 0, 2)
         pad_traj = pad_traj.view(pad_traj.size(0) * pad_traj.size(1), pad_traj.size(2), -1)
-        print(pad_traj.size())
+        # print(pad_traj.size())
         pad_traj = pad_traj.permute(1, 0, 2)
-        print(pad_traj.size())
+        # print(pad_traj.size())
         # final_encoder_h = self.debug_mlp(traj)
         # print(pad_traj.size())
         final_encoder_h = self.encoder(pad_traj)
         pad_hiddens = torch.squeeze(final_encoder_h)
-        print(pad_hiddens.size())
+        # print(pad_hiddens.size())
         pad_hiddens = pad_hiddens.view(batch_size, -1, self.encoder_h_dim)
-        print(pad_hiddens.size())
+        # print(pad_hiddens.size())
         # hiddens_list = []
         # l = []
         # for i, start_end in enumerate(seq_start_end):
@@ -175,7 +175,7 @@ class CNNTrajectoryGenerator(nn.Module):
         # packed_h = packed_h.data
         # for i, start_end in enumerate(seq_start_end):
         #     packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
-        spatial = self.to_spatial(packed_h).view(hiddens.size(0), -1)
+        spatial = self.to_spatial(packed_h).view(-1, self.pred_len * 2)
         spatial = spatial.view(-1, self.pred_len, 2)
         spatial = spatial.permute(1, 0, 2)
         #         mlp_decoder_context_input = final_encoder_h.view(

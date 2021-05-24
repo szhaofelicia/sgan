@@ -124,11 +124,16 @@ class CNNTrajectoryGenerator(nn.Module):
         for i, start_end in enumerate(seq_start_end):
             traj_list.append(traj[start_end[0]:start_end[1], :, :])
             l.append(start_end[1] - start_end[0])
-        pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list)
+        print(len(l))
+        pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list, batch_first=True)
+        print(pad_traj.size())
+        # pad_traj = pad_traj.permute(1, 0, 2)
+        pad_traj = pad_traj.view(pad_traj.size(0) * pad_traj.size(1), pad_traj.size(2), -1)
         print(pad_traj.size())
         pad_traj = pad_traj.permute(1, 0, 2)
-        # final_encoder_h = self.debug_mlp(traj)
         print(pad_traj.size())
+        # final_encoder_h = self.debug_mlp(traj)
+        # print(pad_traj.size())
         final_encoder_h = self.encoder(pad_traj)
         pad_hiddens = torch.squeeze(final_encoder_h)
 

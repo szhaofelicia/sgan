@@ -119,17 +119,25 @@ class CNNTrajectoryGenerator(nn.Module):
         traj = obs_traj_rel.permute(1, 0, 2)
         print(traj.size())
         traj = traj.reshape(-1, self.obs_len * 2)
-        final_encoder_h = self.debug_mlp(traj)
-        # final_encoder_h = self.encoder(obs_traj_rel)
-        hiddens = torch.squeeze(final_encoder_h)
-
-        hiddens_list = []
+        traj_list = []
         l = []
         for i, start_end in enumerate(seq_start_end):
-            hiddens_list.append(hiddens[start_end[0]:start_end[1], :])
+            traj_list.append(obs_traj_rel[start_end[0]:start_end[1], :])
             l.append(start_end[1] - start_end[0])
-        pad_hiddens = torch.nn.utils.rnn.pad_sequence(hiddens_list)
-        pad_hiddens = pad_hiddens.permute(1, 0, 2)
+        pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list)
+        pad_traj = pad_traj.permute(1, 0, 2)
+        # final_encoder_h = self.debug_mlp(traj)
+        print(pad_traj.size())
+        final_encoder_h = self.encoder(pad_traj)
+        pad_hiddens = torch.squeeze(final_encoder_h)
+
+        # hiddens_list = []
+        # l = []
+        # for i, start_end in enumerate(seq_start_end):
+        #     hiddens_list.append(hiddens[start_end[0]:start_end[1], :])
+        #     l.append(start_end[1] - start_end[0])
+        # pad_hiddens = torch.nn.utils.rnn.pad_sequence(hiddens_list)
+        # pad_hiddens = pad_hiddens.permute(1, 0, 2)
         # print(pad_hiddens.size())
         # hiddens = hiddens.view(batch_size, 11, -1)
         # pad_hiddens = torch.rand(batch_size, 11, hiddens.size(-1)).cuda()

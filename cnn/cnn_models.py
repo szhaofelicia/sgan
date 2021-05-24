@@ -118,7 +118,7 @@ class CNNTrajectoryGenerator(nn.Module):
         image_features = torch.squeeze(image_features)
         traj = obs_traj_rel.permute(1, 0, 2)
         print(traj.size())
-        traj = traj.view(-1, self.obs_len * 2)
+        traj = traj.reshape(-1, self.obs_len * 2)
         final_encoder_h = self.debug_mlp(traj)
         # final_encoder_h = self.encoder(obs_traj_rel)
         hiddens = torch.squeeze(final_encoder_h)

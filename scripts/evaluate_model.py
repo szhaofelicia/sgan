@@ -1,7 +1,8 @@
 import argparse
 import os
 import torch
-
+import sys
+sys.path.append("../")
 from attrdict import AttrDict
 
 from sgan.data.loader import data_loader
@@ -113,9 +114,9 @@ def get_generator(checkpoint):
         pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation
     )
-    generator.load_state_dict(checkpoint['g_state'])
+    generator.load_state_dict(checkpoint['g_best_state'])
     generator.cuda()
-    generator.train()
+    generator.eval()
     return generator
 
     # regressor = TrajectoryLinearRegressor(
@@ -204,15 +205,21 @@ def evaluate(args, loader, generator, num_samples):
 
 
 def main(args):
-    if os.path.isdir(args.model_path):
-        filenames = os.listdir(args.model_path)
-        filenames.sort()
-        paths = [
-            os.path.join(args.model_path, file_) for file_ in filenames
-        ]
-    else:
-        paths = [args.model_path]
-
+    # if os.path.isdir(args.model_path):
+    #     filenames = os.listdir(args.model_path)
+    #     filenames.sort()
+    #     paths = [
+    #         os.path.join(args.model_path, file_) for file_ in filenames
+    #     ]
+    # else:
+    #     paths = [args.model_path]
+    paths = []
+    model_dir = "/home/jnzs1836/Documents/s05.models/cross.s05/results/"
+    models = [
+        "cs05.team_pos_attentiontp_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10_with_model.pt"
+    ]
+    for model in models:
+        paths.append(os.path.join(model_dir, model))
     count=0
     for path in paths:
         model_name=path.split('/')[-1]

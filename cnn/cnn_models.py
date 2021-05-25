@@ -10,7 +10,7 @@ class CNNTrajectoryGenerator(nn.Module):
     def __init__(self, obs_len=12, pred_len=8, embedding_dim=64, encoder_h_dim=32, decoder_h_dim=32,
                  mlp_dim=64, num_layers=1, dropout=0.5, batch_norm=True,
                  noise_dim=(0,), noise_type='gaussian', image_pretrained=False,
-                 noise_mix_type='ped', attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128):
+                 noise_mix_type='ped', attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128, channels=23):
         super(CNNTrajectoryGenerator, self).__init__()
         self.obs_len = obs_len
         self.pred_len = pred_len
@@ -18,7 +18,7 @@ class CNNTrajectoryGenerator(nn.Module):
         self.batch_norm = batch_norm
         self.image_drawer = TrajectoryDrawer(target_size=[224, 224])
 
-        self.image_feature_extractor = self._make_image_feature_extractor(pretrained=image_pretrained)
+        self.image_feature_extractor = self._make_image_feature_extractor(channels, pretrained=image_pretrained)
         self.encoder = Encoder(
             embedding_dim=embedding_dim,
             h_dim=encoder_h_dim,
@@ -26,6 +26,7 @@ class CNNTrajectoryGenerator(nn.Module):
             mlp_dim=mlp_dim,
             num_layers=num_layers,
         )
+        self.channels = channels
         self.num_layers = 1
         self.decoder_h_dim = decoder_h_dim
         self.encoder_h_dim = encoder_h_dim
@@ -56,9 +57,9 @@ class CNNTrajectoryGenerator(nn.Module):
     #             pooling_type=pooling_type,
     #             grid_size=grid_size,
     #             neighborhood_size=neighborhood_size,)
-    def _make_image_feature_extractor(self, pretrained=False):
+    def _make_image_feature_extractor(self, channels, pretrained=False):
         resnet = models.resnet18(pretrained=pretrained)
-        conv1 = nn.Conv2d(11, 64, kernel_size=7, stride=2, padding=3,
+        conv1 = nn.Conv2d(channels, 64, kernel_size=7, stride=2, padding=3,
                           bias=False)
         module_list = list(resnet.children())
         image_feature_extractor = nn.Sequential(conv1, *module_list[1:-2])
@@ -109,32 +110,32 @@ class CNNTrajectoryGenerator(nn.Module):
             images = self.image_drawer.generate_batch_images(obs_traj.cpu())
             images = images.cuda()
             images.requires_grad = False
-        pad_images = torch.zeros(batch_size, 11, 224, 224).cuda()
+        pad_images = torch.zeros(batch_size, -1, 224, 224).cuda()
         for i, start_end in enumerate(seq_start_end):
             pad_images[i, 0:start_end[1] - start_end[0], :, :] = images[start_end[0]:start_end[1], :, :]
         images = pad_images
-        images = images.view(batch_size, 11, 224, 224)
+        images = images.view(batch_size, -1, 224, 224)
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)
-        traj = obs_traj_rel.permute(1, 0, 2)
+        # traj = obs_traj_rel.permute(1, 0, 2)
         # print(traj.size())
         # traj = traj.reshape(-1, self.obs_len * 2)
-        traj_list = []
-        l = []
-        for i, start_end in enumerate(seq_start_end):
-            traj_list.append(traj[start_end[0]:start_end[1], :, :])
-            l.append(start_end[1] - start_end[0])
+        # traj_list = []
+        # l = []
+        # for i, start_end in enumerate(seq_start_end):
+        #     traj_list.append(traj[start_end[0]:start_end[1], :, :])
+        #     l.append(start_end[1] - start_end[0])
         # print(len(l))
-        pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list, batch_first=True)
+        # pad_traj = torch.nn.utils.rnn.pad_sequence(traj_list, batch_first=True)
         # print(pad_traj.size())
         # pad_traj = pad_traj.permute(1, 0, 2)
-        pad_traj = pad_traj.view(pad_traj.size(0) * pad_traj.size(1), pad_traj.size(2), -1)
+        # pad_traj = pad_traj.view(pad_traj.size(0) * pad_traj.size(1), pad_traj.size(2), -1)
         # print(pad_traj.size())
-        pad_traj = pad_traj.permute(1, 0, 2)
+        # pad_traj = pad_traj.permute(1, 0, 2)
         # print(pad_traj.size())
         # final_encoder_h = self.debug_mlp(traj)
         # print(pad_traj.size())
-        final_encoder_h = self.encoder(pad_traj)
+        final_encoder_h = self.encoder(obs_traj_rel)
         pad_hiddens = torch.squeeze(final_encoder_h)
         # print(pad_hiddens.size())
         pad_hiddens = pad_hiddens.view(batch_size, -1, self.encoder_h_dim)
@@ -158,14 +159,14 @@ class CNNTrajectoryGenerator(nn.Module):
         # packed_h = torch.zeros(hiddens.size(0), h.size(-1)).cuda()
         # print(l)
 
-        batch_boolean = [False for i in range(h.size(0) * h.size(1))]
-        for i in range(h.size(0)):
-            t = l[i]
-            for j in range(t):
-                batch_boolean[i * h.size(1) + j] = True
+        # batch_boolean = [False for i in range(h.size(0) * h.size(1))]
+        # for i in range(h.size(0)):
+        #     t = l[i]
+        #     for j in range(t):
+        #         batch_boolean[i * h.size(1) + j] = True
         h = h.view(-1, h.size(-1))
         # print(h.size())
-        h = h[batch_boolean]
+        # h = h[batch_boolean]
         # print(h.size())
         packed_h = h
         # packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True, enforce_sorted=False)

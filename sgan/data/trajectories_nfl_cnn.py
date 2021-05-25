@@ -101,10 +101,12 @@ def parse_file(_path, delim='\t'):
                 # for pos in positions:
                 #     pos_vector[posi_ids.index(pos)] = 1.0
             else:
+                if type(value) == str:
+                    print(value, _path)
                 row.append(value)  # float
         row += team_vector  # team_id
         row += pos_vector  # player_position
-        print(row)
+        # print(row)
         data.append(row)
     return np.asarray(data)
 

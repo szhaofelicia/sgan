@@ -235,7 +235,7 @@ class TrajectoryDataset(Dataset):
                     curr_position[_idx, :, pad_front:pad_end] = curr_ped_pos
 
                     num_peds_considered += 1
-
+                print(num_peds_considered, min_ped)
                 if num_peds_considered > min_ped:
                     non_linear_ped += _non_linear_ped
                     num_peds_in_seq.append(num_peds_considered)

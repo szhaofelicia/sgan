@@ -110,10 +110,10 @@ class CNNTrajectoryGenerator(nn.Module):
             images = self.image_drawer.generate_batch_images(obs_traj.cpu())
             images = images.cuda()
             images.requires_grad = False
-        pad_images = torch.zeros(batch_size, -1, 224, 224).cuda()
-        for i, start_end in enumerate(seq_start_end):
-            pad_images[i, 0:start_end[1] - start_end[0], :, :] = images[start_end[0]:start_end[1], :, :]
-        images = pad_images
+        # pad_images = torch.zeros(batch_size, -1, 224, 224).cuda()
+        # for i, start_end in enumerate(seq_start_end):
+        #     pad_images[i, 0:start_end[1] - start_end[0], :, :] = images[start_end[0]:start_end[1], :, :]
+        # images = pad_images
         images = images.view(batch_size, -1, 224, 224)
         image_features = self.image_feature_extractor(images)
         image_features = torch.squeeze(image_features)

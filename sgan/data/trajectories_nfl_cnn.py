@@ -95,7 +95,6 @@ def parse_file(_path, delim='\t'):
                 if value == "ball":
                     row.append(-1.0)
                 else:
-                    print(value, type(value))
                     row.append(value)  # float
             elif col == 6:  # player_position
                 positions = value.strip('"').split(",")
@@ -105,7 +104,7 @@ def parse_file(_path, delim='\t'):
                 row.append(value)  # float
         row += team_vector  # team_id
         row += pos_vector  # player_position
-
+        print(row)
         data.append(row)
     return np.asarray(data)
 

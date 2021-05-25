@@ -102,12 +102,14 @@ def parse_file(_path, delim='\t'):
                 #     pos_vector[posi_ids.index(pos)] = 1.0
             else:
                 if type(value) == str:
-                    print(value, _path)
+                    print("wrong", value, _path)
                 row.append(value)  # float
+        print(row)
         row += team_vector  # team_id
         row += pos_vector  # player_position
         # print(row)
         data.append(row)
+        # print(row)
     return np.asarray(data)
 
 
@@ -181,8 +183,11 @@ class TrajectoryDataset(Dataset):
 
         for path in tqdm(all_files):
             data = parse_file(path, delim)
-
             frames = np.unique(data[:, 0]).tolist()
+            # print(frames)
+            frames = np.unique(data[:, 1]).tolist()
+            # print(frames)
+            # print("---------------------")
             frame_data = []
             for frame in frames:
                 frame_data.append(data[frame == data[:, 1], :])  # frame_id
@@ -235,7 +240,6 @@ class TrajectoryDataset(Dataset):
                     curr_position[_idx, :, pad_front:pad_end] = curr_ped_pos
 
                     num_peds_considered += 1
-                print(num_peds_considered, min_ped)
                 if num_peds_considered > min_ped:
                     non_linear_ped += _non_linear_ped
                     num_peds_in_seq.append(num_peds_considered)

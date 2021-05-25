@@ -426,7 +426,7 @@ def main(args):
         #     writer.add_scalar("train/{}".format(k),v,epoch)
 
 def discriminator_step(
-    args, batch, generator, discriminator, d_loss_fn, optimizer_d
+        args, batch, generator, discriminator, d_loss_fn, optimizer_d
 ):
     batch = [tensor.cuda() for tensor in batch]
     (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,

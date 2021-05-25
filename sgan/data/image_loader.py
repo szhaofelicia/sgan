@@ -2,8 +2,8 @@ from torch.utils.data import DataLoader
 
 # from sgan.data.trajectories import TrajectoryDataset, seq_collate
 # from sgan.data.trajectories_basketball import TrajectoryDataset, seq_collate
-from sgan.data.trajectories_basketball_cnn import TrajectoryDataset, seq_collate
-
+# from sgan.data.trajectories_basketball_cnn import TrajectoryDataset, seq_collate
+from sgan.data.trajectories_nfl_cnn import TrajectoryDataset, seq_collate
 
 def image_data_loader(args, path, channels=None):
     dset = TrajectoryDataset(

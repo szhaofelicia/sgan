@@ -78,7 +78,7 @@ def parse_file(_path, delim='\t'):
     lines = read_file(_path, delim)
     team_ids = np.unique([int(line[2]) for line in lines if isfloat(line[2])]).tolist()
     posi_ids = ["C", "F", "G", "ball"]
-
+    print("process", _path)
     for line in lines:
         row = []
         team_vector = [0.0] * 3  # 0 1 ball

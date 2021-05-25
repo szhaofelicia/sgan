@@ -226,8 +226,8 @@ def main(args):
         discriminator.parameters(), lr=args.d_learning_rate
     )
 
-    scheduler_g = optim.lr_scheduler.MultiStepLR(optimizer_g, milestones=[10, 50], gamma=args.g_gamma)
-    scheduler_d = optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=[10, 50], gamma=args.d_gamma)
+    scheduler_g = optim.lr_scheduler.ExponentialLR(optimizer_g, gamma=args.g_gamma)
+    scheduler_d = optim.lr_scheduler.ExponentialLR(optimizer_d, gamma=args.d_gamma)
 
     # Maybe restore from checkpoint
     restore_path = None

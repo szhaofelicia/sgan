@@ -95,6 +95,7 @@ def parse_file(_path, delim='\t'):
                 if value == "ball":
                     row.append(-1.0)
                 else:
+                    print(value, type(value))
                     row.append(value)  # float
             elif col == 6:  # player_position
                 positions = value.strip('"').split(",")

@@ -12,7 +12,7 @@ class CNNTrajectoryGenerator(nn.Module):
                  noise_dim=(0,), noise_type='gaussian', image_pretrained=False,
                  noise_mix_type='ped',
                  attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128,
-                 channels=23, pool_every_timestep=True, bottleneck_dim=1024, pooling_type=None,
+                 channels=23, pool_every_timestep=False, bottleneck_dim=1024, pooling_type=None,
                 activation='relu', neighborhood_size=2.0, grid_size=8):
         super(CNNTrajectoryGenerator, self).__init__()
         self.obs_len = obs_len

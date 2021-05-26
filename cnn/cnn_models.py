@@ -216,7 +216,7 @@ class CNNTrajectoryGenerator(nn.Module):
         # h = h[batch_boolean]
         # print(h.size())
         packed_h = h
-        print("h", h.size())
+        # print("h", h.size())
 
         mlp_decoder_context_input = h
         if self.mlp_decoder_needed():
@@ -230,7 +230,7 @@ class CNNTrajectoryGenerator(nn.Module):
         decoder_c = torch.zeros(
             self.num_layers, num_agents, self.decoder_h_dim
         ).cuda()
-        print("docoder h", decoder_h.size())
+        # print("docoder h", decoder_h.size())
         state_tuple = (decoder_h, decoder_c)
         last_pos = obs_traj[-1]
         last_pos_rel = obs_traj_rel[-1]
@@ -243,7 +243,8 @@ class CNNTrajectoryGenerator(nn.Module):
             seq_start_end,
         )
         pred_traj_fake_rel, final_decoder_h = decoder_out
-        print("pred", pred_traj_fake_rel.size())
+        # print("pred", pred_traj_fake_rel.size())
+        return pred_traj_fake_rel
         # packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True, enforce_sorted=False)
         # print(packed_h.data.size())
         # print(packed_h.sorted_indices)
@@ -251,9 +252,9 @@ class CNNTrajectoryGenerator(nn.Module):
         # packed_h = packed_h.data
         # for i, start_end in enumerate(seq_start_end):
         #     packed_h[start_end[0]: start_end[1], :] = h[i, 0: start_end[1]-start_end[0], :]
-        spatial = self.to_spatial(packed_h).view(-1, self.pred_len * 2)
-        spatial = spatial.view(-1, self.pred_len, 2)
-        spatial = spatial.permute(1, 0, 2)
+        # spatial = self.to_spatial(packed_h).view(-1, self.pred_len * 2)
+        # spatial = spatial.view(-1, self.pred_len, 2)
+        # spatial = spatial.permute(1, 0, 2)
         #         mlp_decoder_context_input = final_encoder_h.view(
         #                 -1, self.encoder_h_dim)
         #         noise_input = mlp_decoder_context_input
@@ -277,4 +278,4 @@ class CNNTrajectoryGenerator(nn.Module):
         #             seq_start_end,
         #         )
 
-        return spatial
+        # return spatial

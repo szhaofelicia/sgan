@@ -10,7 +10,10 @@ class CNNTrajectoryGenerator(nn.Module):
     def __init__(self, obs_len=12, pred_len=8, embedding_dim=64, encoder_h_dim=32, decoder_h_dim=32,
                  mlp_dim=64, num_layers=1, dropout=0.5, batch_norm=True,
                  noise_dim=(0,), noise_type='gaussian', image_pretrained=False,
-                 noise_mix_type='ped', attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128, channels=23):
+                 noise_mix_type='ped',
+                 attention_layer_num=2, n_head=16, key_dim=16, value_dim=16, decoder_inner_dim=128,
+                 channels=23, pool_every_timestep=True, bottleneck_dim=1024, pooling_type=None,
+                activation='relu', neighborhood_size=2.0, grid_size=8):
         super(CNNTrajectoryGenerator, self).__init__()
         self.obs_len = obs_len
         self.pred_len = pred_len
@@ -42,7 +45,21 @@ class CNNTrajectoryGenerator(nn.Module):
         self.attentions = nn.ModuleList(
             [ImageAttentionLayer(d_inner=decoder_inner_dim, key_dim=key_dim, value_dim=value_dim, n_head=n_head, hidden_dim=encoder_h_dim, image_dim=512, dropout=dropout) for i in range(attention_layer_num)])
         self.to_spatial = nn.Linear(encoder_h_dim, 2 * pred_len)
-
+        self.decoder = Decoder(
+            pred_len,
+            embedding_dim=embedding_dim,
+            h_dim=decoder_h_dim,
+            mlp_dim=mlp_dim,
+            num_layers=num_layers,
+            pool_every_timestep=pool_every_timestep,
+            dropout=dropout,
+            bottleneck_dim=bottleneck_dim,
+            activation=activation,
+            batch_norm=batch_norm,
+            pooling_type=pooling_type,
+            grid_size=grid_size,
+            neighborhood_size=neighborhood_size
+        )
     #         self.decoder = Decoder(
     #             pred_len,
     #             embedding_dim=embedding_dim,

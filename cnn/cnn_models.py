@@ -106,6 +106,7 @@ class CNNTrajectoryGenerator(nn.Module):
 
     def forward(self, obs_traj, obs_traj_rel, seq_start_end, obs_team, obs_pos, user_noise=None, images=None):
         batch_size = len(seq_start_end)
+        num_agents = obs_traj.size(1)
         if images == None:
             images = self.image_drawer.generate_batch_images(obs_traj.cpu())
             images = images.cuda()
@@ -170,6 +171,30 @@ class CNNTrajectoryGenerator(nn.Module):
         # h = h[batch_boolean]
         # print(h.size())
         packed_h = h
+        print("h", h.size())
+        mlp_decoder_context_input = h
+        noise_input = mlp_decoder_context_input
+        decoder_h = self.add_noise(
+            noise_input, seq_start_end, user_noise=user_noise)
+        decoder_h = torch.unsqueeze(decoder_h, 0)
+
+        decoder_c = torch.zeros(
+            self.num_layers, num_agents, self.decoder_h_dim
+        ).cuda()
+        print("docoder h", decoder_h.size())
+        state_tuple = (decoder_h, decoder_c)
+        last_pos = obs_traj[-1]
+        last_pos_rel = obs_traj_rel[-1]
+        # Predict Trajectory
+
+        decoder_out = self.decoder(
+            last_pos,
+            last_pos_rel,
+            state_tuple,
+            seq_start_end,
+        )
+        pred_traj_fake_rel, final_decoder_h = decoder_out
+        print("pred", pred_traj_fake_rel.size())
         # packed_h = torch.nn.utils.rnn.pack_padded_sequence(h, l, batch_first=True, enforce_sorted=False)
         # print(packed_h.data.size())
         # print(packed_h.sorted_indices)

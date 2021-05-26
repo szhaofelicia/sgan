@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from sgan.models import Encoder, Decoder, get_noise
+from sgan.models import Encoder, Decoder, get_noise, make_mlp
 from .drawer import TrajectoryDrawer
 from .attention import ImageAttentionLayer
 
@@ -60,6 +60,26 @@ class CNNTrajectoryGenerator(nn.Module):
             grid_size=grid_size,
             neighborhood_size=neighborhood_size
         )
+        if self.noise_dim[0] == 0:
+            self.noise_dim = None
+        else:
+            self.noise_first_dim = noise_dim[0]
+        if pooling_type:
+            input_dim = encoder_h_dim + bottleneck_dim
+        else:
+            input_dim = encoder_h_dim
+        if self.mlp_decoder_needed():
+            mlp_decoder_context_dims = [
+                input_dim, mlp_dim, decoder_h_dim - self.noise_first_dim
+            ]
+
+            self.mlp_decoder_context = make_mlp(
+                mlp_decoder_context_dims,
+                activation=activation,
+                batch_norm=batch_norm,
+                dropout=dropout
+            )
+
     #         self.decoder = Decoder(
     #             pred_len,
     #             embedding_dim=embedding_dim,
@@ -82,7 +102,14 @@ class CNNTrajectoryGenerator(nn.Module):
         image_feature_extractor = nn.Sequential(conv1, *module_list[1:-2])
 
         return image_feature_extractor
-
+    def mlp_decoder_needed(self):
+        if (
+            self.noise_dim or self.pooling_type or
+            self.encoder_h_dim != self.decoder_h_dim
+        ):
+            return True
+        else:
+            return False
     def add_noise(self, _input, seq_start_end, user_noise=None):
         """
         Inputs:
@@ -184,13 +211,18 @@ class CNNTrajectoryGenerator(nn.Module):
         #     for j in range(t):
         #         batch_boolean[i * h.size(1) + j] = True
         h = h.view(-1, h.size(-1))
+
         # print(h.size())
         # h = h[batch_boolean]
         # print(h.size())
         packed_h = h
         print("h", h.size())
+
         mlp_decoder_context_input = h
-        noise_input = mlp_decoder_context_input
+        if self.mlp_decoder_needed():
+            noise_input = self.mlp_decoder_context(mlp_decoder_context_input)
+        else:
+            noise_input = mlp_decoder_context_input
         decoder_h = self.add_noise(
             noise_input, seq_start_end, user_noise=user_noise)
         decoder_h = torch.unsqueeze(decoder_h, 0)

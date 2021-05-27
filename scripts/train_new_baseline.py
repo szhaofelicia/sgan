@@ -13,25 +13,20 @@ import time
 import json
 # import yaml
 
-from collections import defaultdict
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 from torch.utils.tensorboard import SummaryWriter
 
 from sgan.data.new_loader import data_loader
-from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
-from sgan.losses import displacement_error, final_displacement_error
-from sgan.initialization import build_models
-from sgan.models import TrajectoryGenerator, TrajectoryDiscriminator
+from sgan.losses import gan_g_loss, gan_d_loss
+from training.initialization import build_models, build_schedulers, build_optimizers
+from training.checkpoint import restore_from_checkpoint, initialize_checkpoint
 
-from sgan.gan import generator_step, discriminator_step
-from sgan.evaluation import check_accuracy, cal_ade, cal_fde, cal_l2_losses
+from training.gan import generator_step, discriminator_step
+from training.evaluation import check_accuracy
 from sgan.utils import int_tuple, bool_flag, get_total_norm
-from sgan.utils import relative_to_abs, get_dset_path
-
 
 torch.backends.cudnn.benchmark = True
 writer = SummaryWriter()
@@ -72,6 +67,10 @@ parser.add_argument('--dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
 parser.add_argument('--interaction_activation', default="none", type=str)
+
+parser.add_argument('--tp_dropout', default=0, type=float)
+parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
+parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
@@ -171,7 +170,7 @@ def main(args):
         'There are {} iterations per epoch'.format(iterations_per_epoch)
     )
 
-    generator, discriminator = build_models(args)
+    generator, discriminator = build_models(args, args.model)
 
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')
@@ -184,13 +183,8 @@ def main(args):
     g_loss_fn = gan_g_loss
     d_loss_fn = gan_d_loss
 
-    optimizer_g = optim.Adam(generator.parameters(), lr=args.g_learning_rate)
-    optimizer_d = optim.Adam(
-        discriminator.parameters(), lr=args.d_learning_rate
-    )
-
-    scheduler_g = optim.lr_scheduler.MultiStepLR(optimizer_g, milestones=[10, 50], gamma=args.g_gamma)
-    scheduler_d = optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=[10, 50], gamma=args.d_gamma)
+    optimizer_g, optimizer_d = build_optimizers(args, generator, discriminator)
+    scheduler_g, scheduler_d = build_schedulers(args, optimizer_g, optimizer_d)
 
     # Maybe restore from checkpoint
     restore_path = None
@@ -203,42 +197,13 @@ def main(args):
     if restore_path is not None and os.path.isfile(restore_path):
         logger.info('Restoring from checkpoint {}'.format(restore_path))
         checkpoint = torch.load(restore_path)
-        generator.load_state_dict(checkpoint['g_state'])
-        discriminator.load_state_dict(checkpoint['d_state'])
-        optimizer_g.load_state_dict(checkpoint['g_optim_state'])
-        optimizer_d.load_state_dict(checkpoint['d_optim_state'])
-        t = checkpoint['counters']['t']
-        epoch = checkpoint['counters']['epoch']
+        generator, discriminator, optimizer_g, optimizer_d, t, epoch = \
+            restore_from_checkpoint(checkpoint, generator, discriminator, optimizer_g, optimizer_d)
         checkpoint['restore_ts'].append(t)
     else:
         # Starting from scratch, so initialize checkpoint data structure
         t, epoch = 0, 0
-        checkpoint = {
-            'args': args.__dict__,
-            'G_losses': defaultdict(list),
-            'D_losses': defaultdict(list),
-            'losses_ts': [],
-            'metrics_val': defaultdict(list),
-            'metrics_train': defaultdict(list),
-            'sample_ts': [],
-            'restore_ts': [],
-            'norm_g': [],
-            'norm_d': [],
-            'counters': {
-                't': None,
-                'epoch': None,
-            },
-            'g_state': None,
-            'g_optim_state': None,
-            'd_state': None,
-            'd_optim_state': None,
-            'g_best_state': None,
-            'd_best_state': None,
-            'best_t': None,
-            'g_best_nl_state': None,
-            'd_best_state_nl': None,
-            'best_t_nl': None,
-        }
+        checkpoint = initialize_checkpoint(args)
     t0 = None
     while t < args.num_iterations:
         gc.collect()

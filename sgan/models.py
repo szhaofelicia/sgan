@@ -622,7 +622,7 @@ class TrajectoryDiscriminator(nn.Module):
                 trajD=trajD
             )
 
-    def forward(self, traj, traj_rel, team, pos, seq_start_end=None):
+    def forward(self, traj, traj_rel, seq_start_end=None):
         """
         Inputs:
         - traj: Tensor of shape (obs_len + pred_len, batch, 2)

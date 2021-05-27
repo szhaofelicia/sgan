@@ -1,5 +1,6 @@
 python /scratch/sz2257/sgan/scripts/train_basketball_teampos.py  \
-  --dataset_name 'nba-cross.s05' \
+  --dataset_name
+   \
   --dataset_dir /scratch/sz2257/basketball-partial \
   --delim tab \
   --d_type 'local' \

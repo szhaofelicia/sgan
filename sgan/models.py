@@ -371,7 +371,9 @@ class TrajectoryGenerator(nn.Module):
         decoder_h_dim=128, mlp_dim=1024, num_layers=1, noise_dim=(0, ),
         noise_type='gaussian', noise_mix_type='ped', pooling_type=None,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8, interaction_activation="none"
+        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
+        team_embedding_dim=0, pos_embedding_dim=0, tp_dropout=0.0,
+        interaction_activation="none"
     ):
         super(TrajectoryGenerator, self).__init__()
 
@@ -568,7 +570,9 @@ class TrajectoryDiscriminator(nn.Module):
     def __init__(
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
         num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
-        d_type='local', interaction_activation="none"
+        d_type='local',
+        team_embedding_dim=0, pos_embedding_dim=0, tp_dropout=0.0,
+        interaction_activation="none"
     ):
         super(TrajectoryDiscriminator, self).__init__()
 

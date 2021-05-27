@@ -68,33 +68,52 @@ def read_file(_path, delim='\t'):
     return lines
 
 
-def parse_file(_path, delim='\t'):
+def parse_file(_path, delim='\t',dset="baseketball",trajD=2):
+    """
+    basketball: index   frame_id    team_id player_id   pos_x   pos_y   player_position
+    csgo:   index   frame_id    team_id player_id   pos_x   pos_y   pos_z
+    dota:   index   frame_id    team_id player_id   pos_x   pos_y  
+    nfl:    index    frame_id    team_id player_id   pos_x   pos_y   player_position
+    """
+
     data = []
     if delim == 'tab':
         delim = '\t'
     elif delim == 'space':
         delim = ' '
     lines = read_file(_path, delim)
-    team_ids = np.unique([int(line[2]) for line in lines if isfloat(line[2])]).tolist()
-    posi_ids = ["C", "F", "G", "ball"]
+    team_ids_ = np.unique([int(line[2]) for line in lines if isfloat(line[2])]).tolist()    
+    team_ids={
+        "basketball": team_ids_+["ball"],
+        "csgo": ["T","CT"],
+        "dota": [0,1],
+        "nfl": [0,1,"ball"],
+    }
+    team_dim=len(team_ids[dset])
+    posi_ids = {
+        "basketball":["C", "F", "G", "ball"],
+        "csgo":[None], # no player_position
+        "dota":[None], # no player_position
+        "nfl":["player","ball"]
+    }
+    posi_dim=len(posi_ids[dset])
+
+    index,frame_idx,team_idx, player_idx,traj_idx,posi_idx=0,1,2,3,4,4+trajD
 
     for line in lines:
         row = []
-        team_vector = [0.0] * 3  # 0 1 ball
-        pos_vector = [0.0] * 4  # 0 1 2 ball
+        team_vector = [0.0] * team_dim  
+        pos_vector = [0.0] * posi_dim 
         for col, value in enumerate(line):
-            if col == 2:  # team_id
-                if value == "ball":
-                    team_vector[2] = 1.0
-                else:
-                    team = team_ids.index(int(value))
-                    team_vector[team] = 1.0
-            elif col == 3:  # player_id
+            if col == team_idx:  # team_id
+                team = team_ids[dset].index(int(value))
+                team_vector[team] = 1.0
+            elif col == player_idx:  # player_id
                 if value == "ball":
                     row.append(-1.0)
                 else:
                     row.append(value)  # float
-            elif col == 6:  # player_position
+            elif col == posi_idx:  # player_position: basketball,nfl
                 positions = value.strip('"').split(",")
                 for pos in positions:
                     pos_vector[posi_ids.index(pos)] = 1.0
@@ -107,7 +126,7 @@ def parse_file(_path, delim='\t'):
     return np.asarray(data)
 
 
-def poly_fit(traj, traj_len, threshold):
+def poly_fit(traj, traj_len, threshold,trajD=2):
     """
     Input:
     - traj: Numpy array of shape (2, traj_len)
@@ -119,7 +138,9 @@ def poly_fit(traj, traj_len, threshold):
     t = np.linspace(0, traj_len - 1, traj_len)
     res_x = np.polyfit(t, traj[0, -traj_len:], 2, full=True)[1]
     res_y = np.polyfit(t, traj[1, -traj_len:], 2, full=True)[1]
-    if res_x + res_y >= threshold:
+    res_z = np.polyfit(t, traj[2, -traj_len:], 2, full=True)[1] if trajD>2 else 0.0
+
+    if res_x + res_y + res_z >= threshold:
         return 1.0
     else:
         return 0.0
@@ -130,7 +151,7 @@ class TrajectoryDataset(Dataset):
 
     def __init__(
             self, data_dir, obs_len=8, pred_len=12, skip=1, threshold=0.002,
-            min_ped=1, delim='\t', metric="meter", teampos=False
+            min_ped=1, delim='\t', metric="meter", dset="basketball",trajD=2
     ):
         """
         Args:
@@ -143,6 +164,7 @@ class TrajectoryDataset(Dataset):
         when using a linear predictor
         - min_ped: Minimum number of pedestrians that should be in a seqeunce
         - delim: Delimiter in the dataset files
+        - metric: trajectory metric, meter or feet
 
         columns in csv file:
         (idx), frame_id,team_id,player_id,pos_x, pos_y, player_position
@@ -159,7 +181,24 @@ class TrajectoryDataset(Dataset):
         self.skip = skip
         self.seq_len = self.obs_len + self.pred_len
         self.delim = delim
-        self.teampos=teampos
+        self.dset=dset
+        self.trajD=trajD
+
+        team_ids={
+            "basketball":[0,1,"ball"],
+            "csgo": ["T","CT"],
+            "dota": [0,1],
+            "nfl": [0,1,"ball"],
+        }
+        posi_ids = {
+            "basketball":["C", "F", "G", "ball"],
+            "csgo":[None], # no player_position
+            "dota":[None], # no player_position
+            "nfl":["player","ball"]
+        }
+        self.team_dim=len(team_ids[self.dset])
+        self.posi_dim=len(posi_ids[self.dset])    
+
 
         if metric=="meter":
             self.factor=0.3048 # foot to meter
@@ -177,40 +216,42 @@ class TrajectoryDataset(Dataset):
         team_vec_list = []
         pos_vec_list = []
 
+        frame_idx,player_idx,traj_idx,team_idx,posi_idx=1,2,3,3+self.trajD,3+self.trajD+self.team_dim
+
+
         for path in tqdm(all_files):
-            data = parse_file(path, delim)
+            data = parse_file(path, delim, position=self.dset,trajD=self.trajD)
 
             frames = np.unique(data[:, 0]).tolist()
             frame_data = []
             for frame in frames:
-                frame_data.append(data[frame == data[:, 1], :])  # frame_id
+                frame_data.append(data[frame == data[:, frame_idx], :])  # frame_id
             num_sequences = int(
                 math.ceil((len(frames) - self.seq_len + 1) / skip))
 
             for idx in range(0, num_sequences * self.skip + 1, skip):
                 curr_seq_data = np.concatenate(
                     frame_data[idx:idx + self.seq_len], axis=0)
-                peds_in_curr_seq = np.unique(curr_seq_data[:, 2])  # player_id
-                curr_seq_rel = np.zeros((len(peds_in_curr_seq), 2,
-                                         self.seq_len))
-                curr_seq = np.zeros((len(peds_in_curr_seq), 2, self.seq_len))
-                curr_loss_mask = np.zeros((len(peds_in_curr_seq),
-                                           self.seq_len))
+                peds_in_curr_seq = np.unique(curr_seq_data[:, player_idx])  # player_id
+                curr_seq_rel = np.zeros((len(peds_in_curr_seq), self.trajD,self.seq_len))
+                curr_seq = np.zeros((len(peds_in_curr_seq), self.trajD, self.seq_len))
+                curr_loss_mask = np.zeros((len(peds_in_curr_seq),self.seq_len))
                 # vectors
-                curr_team = np.zeros((len(peds_in_curr_seq), 3, self.seq_len))  # 0 1 ball
-                curr_position = np.zeros((len(peds_in_curr_seq), 4, self.seq_len))  # C F G ball
+                curr_team = np.zeros((len(peds_in_curr_seq), self.team_dim, self.seq_len))  
+                curr_position = np.zeros((len(peds_in_curr_seq), self.posi_dim, self.seq_len))  
 
                 num_peds_considered = 0
                 _non_linear_ped = []
 
+
                 for _, ped_id in enumerate(peds_in_curr_seq):
-                    curr_ped_seq_full = curr_seq_data[curr_seq_data[:, 2] == ped_id, :]  # player_id
+                    curr_ped_seq_full = curr_seq_data[curr_seq_data[:, player_idx] == ped_id, :]  # player_id
                     curr_ped_seq_full = np.around(curr_ped_seq_full, decimals=4)
-                    pad_front = frames.index(curr_ped_seq_full[0, 1]) - idx  # frame_id
-                    pad_end = frames.index(curr_ped_seq_full[-1, 1]) - idx + 1  # frame_id
+                    pad_front = frames.index(curr_ped_seq_full[0, frame_idx]) - idx  # frame_id
+                    pad_end = frames.index(curr_ped_seq_full[-1, frame_idx]) - idx + 1  # frame_id
                     if pad_end - pad_front != self.seq_len or curr_ped_seq_full.shape[0] != self.seq_len:
                         continue
-                    curr_ped_seq = np.transpose(curr_ped_seq_full[:, 3:5])  # x,y
+                    curr_ped_seq = np.transpose(curr_ped_seq_full[:, traj_idx:team_idx])  # x,y,(z)
                     curr_ped_seq = curr_ped_seq * self.factor # conversion
                     # Make coordinates relative
                     rel_curr_ped_seq = np.zeros(curr_ped_seq.shape)
@@ -221,26 +262,16 @@ class TrajectoryDataset(Dataset):
                     curr_seq_rel[_idx, :, pad_front:pad_end] = rel_curr_ped_seq
                     # Linear vs Non-Linear Trajectory
                     _non_linear_ped.append(
-                        poly_fit(curr_ped_seq, pred_len, threshold))
+                        poly_fit(curr_ped_seq, pred_len, threshold,trajD=self.trajD))
                     curr_loss_mask[_idx, pad_front:pad_end] = 1
 
-                    if self.teampos:
-                        # Team vector
-                        curr_ped_team = np.transpose(curr_ped_seq_full[:, 5:8])  # [ 0 1 ball]
-                        curr_team[_idx, :, pad_front:pad_end] = curr_ped_team
+                    # Team vector
+                    curr_ped_team = np.transpose(curr_ped_seq_full[:, team_idx:posi_idx])  # team vector
+                    curr_team[_idx, :, pad_front:pad_end] = curr_ped_team
 
-                        # Position Vector
-                        curr_ped_pos = np.transpose(curr_ped_seq_full[:, 8:])  # [ C F G ball]
-                        curr_position[_idx, :, pad_front:pad_end] = curr_ped_pos
-                    else:
-                        # Team vector
-                        curr_ped_team = np.zeros((len(curr_ped_seq_full),3))
-                        curr_team[_idx, :, pad_front:pad_end] = curr_ped_team
-
-                        # Position Vector
-                        curr_ped_pos = p.zeros((len(curr_ped_seq_full),4))
-                        curr_position[_idx, :, pad_front:pad_end] = curr_ped_pos
-
+                    # Position Vector
+                    curr_ped_pos = np.transpose(curr_ped_seq_full[:, posi_idx:])  # position vector
+                    curr_position[_idx, :, pad_front:pad_end] = curr_ped_pos
 
                     num_peds_considered += 1
 

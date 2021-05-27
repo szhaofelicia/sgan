@@ -136,4 +136,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+experiments/runs/*
+experiments/checkpoints/*
+!experiments/runs/.ini
+!experiments/checkpoints/.ini
+!experiments/ReadMe.md
 .idea

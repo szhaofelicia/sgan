@@ -1,8 +1,8 @@
 from torch.utils.data import DataLoader
 
 # from sgan.data.trajectories import TrajectoryDataset, seq_collate
-from sgan.data.trajectories_basic import TrajectoryDataset, seq_collate
 # from sgan.data.trajectories_basketball_0427 import TrajectoryDataset, seq_collate
+from sgan.data.trajectories_general import TrajectoryDataset, seq_collate
 
 
 def data_loader(args, path):
@@ -12,7 +12,9 @@ def data_loader(args, path):
         pred_len=args.pred_len,
         skip=args.skip,
         delim=args.delim,
-        # metric=args.metric
+        metric=args.metric,
+        dset=args.dset,
+        trajD=args.trajD
     )
 
     loader = DataLoader(

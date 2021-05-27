@@ -19,7 +19,7 @@ import torch.nn as nn
 
 from torch.utils.tensorboard import SummaryWriter
 
-from sgan.data.new_loader import data_loader
+from sgan.data.general_loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss
 from training.builders import build_models, build_schedulers, build_optimizers
 from training.checkpoint import restore_from_checkpoint, initialize_checkpoint

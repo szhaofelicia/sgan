@@ -13,7 +13,7 @@ import time
 import json
 # import yaml
 
-import datetime
+from datetime import datetime
 import socket
 import torch
 import torch.nn as nn
@@ -148,9 +148,19 @@ def load_schema(schema_path):
 def main(args):
     print(args)
 
-    tensorboard_name = "_".join([args.model_name, args.dataset_name, time_str, hostname])
-    tensorboard_path = os.path.join(args.output_dir, "runs", tensorboard_name)
+    tensorboard_name = "_".join([args.checkpoint_name, args.dataset_name, time_str, hostname])
+    dataset_runs_dir = os.path.join(args.output_dir, "runs", args.dataset_name)
+    dataset_ckpt_dir = os.path.join(args.output_dir, "checkpoints", args.dataset_name)
+    if not os.path.exists(dataset_runs_dir):
+        os.mkdir(dataset_runs_dir)
+    if not os.path.exists(dataset_ckpt_dir):
+        os.mkdir(dataset_ckpt_dir)
+
+    tensorboard_path = os.path.join(dataset_runs_dir, tensorboard_name)
     writer = SummaryWriter(tensorboard_path)
+    log_path = "{}/config.txt".format(tensorboard_path)
+    with open(log_path, "a") as f:
+        json.dump(args.__dict__, f, indent=2)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
     schema_path = "../sgan/data/configs/{}.json".format(args.schema)
@@ -197,7 +207,7 @@ def main(args):
     if args.checkpoint_start_from is not None:
         restore_path = args.checkpoint_start_from
     elif args.restore_from_checkpoint == 1:
-        restore_path = os.path.join(args.output_dir,
+        restore_path = os.path.join(dataset_ckpt_dir,
                                     '%s_with_model.pt' % args.checkpoint_name)
 
     if restore_path is not None and os.path.isfile(restore_path):
@@ -332,8 +342,8 @@ def main(args):
                 # checkpoint_path = os.path.join(
                 #     args.output_dir, '{}_with_model_{:06d}.pt'.format(args.checkpoint_name,t)
                 # )
-                checkpoint_path = os.path.join(args.output_dir, "checkpoints", '{}_with_model.pt'.format(args.checkpoint_name))
-                backup_checkpoint_path = os.path.join(args.output_dir, "checkpoints", '{}_with_model_backup.pt'.format(args.checkpoint_name))
+                checkpoint_path = os.path.join(dataset_ckpt_dir, '{}_with_model.pt'.format(args.checkpoint_name))
+                backup_checkpoint_path = os.path.join(dataset_ckpt_dir, '{}_with_model_backup.pt'.format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 torch.save(checkpoint, checkpoint_path)
                 torch.save(checkpoint, backup_checkpoint_path)
@@ -345,7 +355,7 @@ def main(args):
                 # checkpoint_path = os.path.join(
                 #     args.output_dir, '{}_no_model_{:06d}.pt' .format(args.checkpoint_name,t))
 
-                checkpoint_path = os.path.join(args.output_dir, "checkpoints",'{}_no_model.pt' .format(args.checkpoint_name))
+                checkpoint_path = os.path.join(dataset_ckpt_dir,'{}_no_model.pt' .format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 key_blacklist = [
                     'g_state', 'd_state', 'g_best_state', 'g_best_nl_state',
@@ -380,9 +390,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    log_path="{}/config.txt".format(writer.get_logdir())
-    with open(log_path,"a") as f:
-        json.dump(args.__dict__,f,indent=2)
+
     # log_path="{}/config.yaml".format(writer.get_logdir())
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)

@@ -13,7 +13,8 @@ import time
 import json
 # import yaml
 
-
+import datetime
+import socket
 import torch
 import torch.nn as nn
 
@@ -29,9 +30,10 @@ from training.evaluation import check_accuracy
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
 torch.backends.cudnn.benchmark = True
-writer = SummaryWriter()
-
-time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
+now = datetime.now()
+time_str = now.strftime("%Y-%m-%d-%H-%M-%S")
+hostname = socket.gethostname()
+# time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
 # output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
 
 output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
@@ -116,7 +118,7 @@ parser.add_argument('--checkpoint_name', default='basketball_phx_sac')
 parser.add_argument('--checkpoint_start_from', default=None)
 parser.add_argument('--restore_from_checkpoint', default=0, type=int) #default:1
 parser.add_argument('--num_samples_check', default=5000, type=int)
-parser.add_argument("--tb_path", default=writer.get_logdir(), type=str)
+parser.add_argument("--tb_path", default=None, type=str)
 
 # Misc
 parser.add_argument('--use_gpu', default=1, type=int) # 1: use_gpu
@@ -145,6 +147,10 @@ def load_schema(schema_path):
 
 def main(args):
     print(args)
+
+    tensorboard_name = "_".join([args.model_name, args.dataset_name, time_str, hostname])
+    tensorboard_path = os.path.join(args.output_dir, "runs", tensorboard_name)
+    writer = SummaryWriter(tensorboard_path)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
     schema_path = "../sgan/data/configs/{}.json".format(args.schema)
@@ -326,9 +332,11 @@ def main(args):
                 # checkpoint_path = os.path.join(
                 #     args.output_dir, '{}_with_model_{:06d}.pt'.format(args.checkpoint_name,t)
                 # )
-                checkpoint_path = os.path.join(args.output_dir, '{}_with_model.pt'.format(args.checkpoint_name))
+                checkpoint_path = os.path.join(args.output_dir, "checkpoints", '{}_with_model.pt'.format(args.checkpoint_name))
+                backup_checkpoint_path = os.path.join(args.output_dir, "checkpoints", '{}_with_model_backup.pt'.format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 torch.save(checkpoint, checkpoint_path)
+                torch.save(checkpoint, backup_checkpoint_path)
                 logger.info('Done.')
 
                 # Save a checkpoint with no model weights by making a shallow
@@ -337,7 +345,7 @@ def main(args):
                 # checkpoint_path = os.path.join(
                 #     args.output_dir, '{}_no_model_{:06d}.pt' .format(args.checkpoint_name,t))
 
-                checkpoint_path = os.path.join(args.output_dir, '{}_no_model.pt' .format(args.checkpoint_name))
+                checkpoint_path = os.path.join(args.output_dir, "checkpoints",'{}_no_model.pt' .format(args.checkpoint_name))
                 logger.info('Saving checkpoint to {}'.format(checkpoint_path))
                 key_blacklist = [
                     'g_state', 'd_state', 'g_best_state', 'g_best_nl_state',
@@ -363,7 +371,7 @@ def main(args):
         #     writer.add_scalar("train/{}".format(k),v,epoch)
         # for k, v in sorted(losses_g.items()):
         #     writer.add_scalar("train/{}".format(k),v,epoch)
-
+    writer.flush()
 
 
 
@@ -375,13 +383,11 @@ if __name__ == '__main__':
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)
-    writer = SummaryWriter(args.tb_path)
     # log_path="{}/config.yaml".format(writer.get_logdir())
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)
     # print(args_file)
 
     main(args)
-    writer.flush()
 
 

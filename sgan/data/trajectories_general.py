@@ -220,7 +220,7 @@ class TrajectoryDataset(Dataset):
 
 
         for path in tqdm(all_files):
-            data = parse_file(path, delim, position=self.dset,trajD=self.trajD)
+            data = parse_file(path, delim, dset=self.dset,trajD=self.trajD)
 
             frames = np.unique(data[:, 0]).tolist()
             frame_data = []

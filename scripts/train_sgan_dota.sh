@@ -1,8 +1,6 @@
-python train_general_teampos.py  \
+python ~/research/sgan/scripts/train_general_teampos.py  \
   --model 'baseline' \
-  --dataset_name 'open-dota2' \
-  # --dataset_dir /scratch/sz2257/data/ \
-  # --output_dir ./dota/results \
+  --dataset_name 'dota-ti-9.v1' \
   --dataset_dir /media/felicia/Data/sgan_data/ \
   --output_dir /media/felicia/Data/sgan_results/dota/ \
   --dset 'dota' \
@@ -11,7 +9,7 @@ python train_general_teampos.py  \
   --d_type 'local' \
   --pred_len 8 \
   --encoder_h_dim_g 32 \
-  --encoder_h_dim_d 64\
+  --encoder_h_dim_d 64 \
   --decoder_h_dim 32 \
   --embedding_dim 16 \
   --team_embedding_dim 4 \
@@ -26,7 +24,7 @@ python train_general_teampos.py  \
   --batch_norm 0 \
   --dropout 0.5 \
   --tp_dropout 0.5 \
-  --batch_size 8 \
+  --batch_size 16 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
   --d_learning_rate 1e-3 \
@@ -43,3 +41,5 @@ python train_general_teampos.py  \
   --interaction_activation 'none' \
   --checkpoint_name dota.baseline_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10 \
   --restore_from_checkpoint 0
+    # --dataset_dir /scratch/sz2257/data/ \
+  # --output_dir ./dota/results \

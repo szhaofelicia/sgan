@@ -4,10 +4,9 @@ import gc
 import logging
 import os
 
-# print("Current Working Directory " , os.getcwd())
-# sys.path.append(os.getcwd())
 
-sys.path.append("/scratch/sz2257/sgan")
+# sys.path.append("/scratch/sz2257/sgan")
+sys.path.append("/home/felicia/research/sgan")
 sys.path.append("../")
 import time
 import json
@@ -28,13 +27,6 @@ from sgan.losses import displacement_error, final_displacement_error
 from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
 # from sgan.models_old import TrajectoryGenerator,  TrajectoryDiscriminator
 from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
-
-
-MODELS = {
-    "baseline": (GeneratorBaseline, DiscriminatorBaseline),
-    "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
-}
-
 
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
@@ -139,6 +131,13 @@ parser.add_argument('--use_gpu', default=1, type=int) # 1: use_gpu
 parser.add_argument('--timing', default=0, type=int)
 parser.add_argument('--gpu_num', default="0", type=str)
 
+
+# MODELS = {
+#     "baseline": (GeneratorBaseline, DiscriminatorBaseline),
+#     "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
+# }
+
+
 def init_weights(m):
     classname = m.__class__.__name__
     if classname.find('Linear') != -1:
@@ -161,8 +160,8 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     # train_path = get_dset_path(args.dataset_name, 'train')
     # val_path = get_dset_path(args.dataset_name, 'val')
-    train_path= os.path.join(args.dataset_dir,args.dataset_name,'train_sample') # 10 files:0-9
-    val_path= os.path.join(args.dataset_dir,args.dataset_name,'val_sample') # 5 files: 10-14
+    train_path= os.path.join(args.dataset_dir,args.dataset_name,'train') # train or train_sample
+    val_path= os.path.join(args.dataset_dir,args.dataset_name,'valid') # valid or val_sample
 
     long_dtype, float_dtype = get_dtypes(args)
 
@@ -179,9 +178,6 @@ def main(args):
         'There are {} iterations per epoch'.format(iterations_per_epoch)
     )
 
-    
-    TrajectoryDiscriminator = MODELS[args.model][0]
-    TrajectoryGenerator = MODELS[args.model][1]
 
     generator = TrajectoryGenerator(
         obs_len=args.obs_len,
@@ -204,7 +200,7 @@ def main(args):
         batch_norm=args.batch_norm,
         team_embedding_dim=args.team_embedding_dim,
         pos_embedding_dim=args.pos_embedding_dim,
-        interaction_activation=args.interaction_activation
+        interaction_activation=args.interaction_activation,
     )
 
     generator.apply(init_weights)
@@ -691,7 +687,12 @@ def cal_fde(
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    # TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
+    MODELS = {
+        "baseline": (GeneratorBaseline, DiscriminatorBaseline),
+        "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
+    }
+
+    TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)

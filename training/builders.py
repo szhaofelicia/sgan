@@ -60,7 +60,7 @@ def build_sgan_models(args):
     return generator, discriminator
 
 
-def build_team_pos_models(args):
+def build_team_pos_models(args, schema):
     generator = TeamPosTrajectoryGenerator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
@@ -82,7 +82,9 @@ def build_team_pos_models(args):
         batch_norm=args.batch_norm,
         team_embedding_dim=args.team_embedding_dim,
         pos_embedding_dim=args.pos_embedding_dim,
-        interaction_activation=args.interaction_activation
+        interaction_activation=args.interaction_activation,
+        pos_vec_len=len(schema['positions']),
+        team_vec_len=3
     )
 
     generator.apply(init_weights)
@@ -101,18 +103,20 @@ def build_team_pos_models(args):
         activation=args.d_activation,  # default: relu,
         pos_embedding_dim=args.pos_embedding_dim,
         team_embedding_dim=args.team_embedding_dim,
-        interaction_activation=args.interaction_activation
+        interaction_activation=args.interaction_activation,
+        pos_vec_len=len(schema['positions']),
+        team_vec_len=3
     )
 
     discriminator.apply(init_weights)
     return generator, discriminator
 
 
-def build_models(args, model_class="sgan"):
+def build_models(args, schema, model_class="sgan"):
     if model_class == "sgan":
         return build_sgan_models(args)
     elif model_class == "team_pos":
-        return build_team_pos_models(args)
+        return build_team_pos_models(args, schema)
 
 
 def build_optimizers(args, generator, discriminator):

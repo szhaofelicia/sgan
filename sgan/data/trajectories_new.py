@@ -303,28 +303,30 @@ class TrajectoryDataset(Dataset):
         elif delim == 'space':
             delim = ' '
         lines = read_file(_path, delim)
-        team_ids = np.unique([int(line[2]) for line in lines if isfloat(line[2])]).tolist()
-        # team_ids = np.unique([line[2] for line in lines]).tolist()
+        # team_ids = np.unique([int(line[2]) for line in lines if isfloat(line[2])]).tolist()
+        team_ids = np.unique([line[2] for line in lines]).tolist()
         posi_ids = self.schema['positions']
         self.team_slice = [5, 5 + len(team_ids) + 1]
         self.pos_slice = [5 + len(team_ids) + 1, 5 + len(team_ids) + 1 + len(posi_ids)]
+        with_ball = self.schema['with_ball']
+        with_position = len(self.schema['positions']) > 0
         for line in lines:
             row = []
-            team_vector = [0.0] * (len(team_ids) + 1)  # 0 1 ball
+            team_vector = [0.0] * (len(team_ids) + int(with_ball))  # 0 1 ball
             pos_vector = [0.0] * len(posi_ids)  # 0 1 2 ball
             for col, value in enumerate(line):
                 if col == 2:  # team_id
                     if value == "ball":
                         team_vector[-1] = 1.0
                     else:
-                        team = team_ids.index(int(value))
+                        team = team_ids.index(value)
                         team_vector[team] = 1.0
                 elif col == 3:  # player_id
                     if value == "ball":
                         row.append(-1.0)
                     else:
                         row.append(value)  # float
-                elif col == 6:  # player_position
+                elif col == 6 and with_position:  # player_position
                     positions = value.strip('"').split(",")
                     for pos in positions:
                         pos_vector[posi_ids.index(pos)] = 1.0

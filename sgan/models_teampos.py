@@ -30,22 +30,26 @@ class Encoder(nn.Module):
     TrajectoryDiscriminator"""
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024,  num_layers=1,
-        dropout=0.0, team_embedding_dim = 16, pos_embedding_dim=32, tp_dropout=0.0
+        dropout=0.0, team_embedding_dim = 16, pos_embedding_dim=32, tp_dropout=0.0,
+        team_vec_len=0, pos_vec_len=0
     ):
         super(Encoder, self).__init__()
 
         self.mlp_dim = 1024
         self.h_dim = h_dim
         self.embedding_dim = embedding_dim
-        self.pos_embedding_dim = pos_embedding_dim
-        self.team_embedding_dim = team_embedding_dim
+        self.pos_embedding_dim = pos_embedding_dim if pos_vec_len > 0 else 0
+        self.team_embedding_dim = team_embedding_dim if team_vec_len > 0 else 0
         self.num_layers = num_layers
-
+        self.team_vec_len = team_vec_len
+        self.pos_vec_len = pos_vec_len
         self.encoder = nn.LSTM(
-            embedding_dim + pos_embedding_dim + team_embedding_dim, h_dim, num_layers, dropout=dropout
+            embedding_dim + self.pos_embedding_dim +self. team_embedding_dim, h_dim, num_layers, dropout=dropout
         )
-        self.team_embedding = nn.Linear(3, team_embedding_dim)
-        self.pos_embedding = nn.Linear(4, pos_embedding_dim)
+        if self.team_vec_len > 0:
+            self.team_embedding = nn.Linear(team_vec_len, team_embedding_dim)
+        if self.pos_vec_len > 0:
+            self.pos_embedding = nn.Linear(pos_vec_len, pos_embedding_dim)
         self.spatial_embedding = nn.Linear(2, embedding_dim)
         self.dropout = nn.Dropout(p=dropout)
         self.tp_dropout = nn.Dropout(p=tp_dropout)
@@ -64,22 +68,28 @@ class Encoder(nn.Module):
         """
         # Encode observed Trajectory
         batch = obs_traj.size(1)
+        embeddings = []
         # obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, 2))
         obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, 2))
-        obs_team_embedding = self.team_embedding(obs_team.reshape(-1, 3))
-        obs_pos_embedding = self.pos_embedding(obs_pos.reshape(-1, 4))
-        obs_team_embedding = self.tp_dropout(obs_team_embedding)
-        obs_pos_embedding = self.tp_dropout(obs_pos_embedding)
         obs_traj_embedding = obs_traj_embedding.view(
             -1, batch, self.embedding_dim
         )
-        obs_team_embedding = obs_team_embedding.view(
-            -1, batch, self.team_embedding_dim
-        )
-        obs_pos_embedding = obs_pos_embedding.view(
-            -1, batch, self.pos_embedding_dim
-        )
-        obs_embedding = torch.cat([obs_traj_embedding, obs_team_embedding, obs_pos_embedding], dim=2)
+        embeddings.append(obs_traj_embedding)
+        if self.team_vec_len > 0:
+            obs_team_embedding = self.team_embedding(obs_team.reshape(-1, self.team_vec_len))
+            obs_team_embedding = self.tp_dropout(obs_team_embedding)
+            obs_team_embedding = obs_team_embedding.view(
+                -1, batch, self.team_embedding_dim
+            )
+            embeddings.append(obs_team_embedding)
+        if self.pos_vec_len > 0:
+            obs_pos_embedding = self.pos_embedding(obs_pos.reshape(-1, self.pos_vec_len))
+            obs_pos_embedding = self.tp_dropout(obs_pos_embedding)
+            obs_pos_embedding = obs_pos_embedding.view(
+                -1, batch, self.pos_embedding_dim
+            )
+            embeddings.append(obs_pos_embedding)
+        obs_embedding = torch.cat(embeddings, dim=2)
         state_tuple = self.init_hidden(batch)
         output, state = self.encoder(obs_embedding, state_tuple)
         final_h = state[0]
@@ -93,7 +103,8 @@ class Decoder(nn.Module):
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
         activation='relu', batch_norm=True, pooling_type='pool_net',
         neighborhood_size=2.0, grid_size=8, interaction_activation="none",
-        team_embedding_dim=16, pos_embedding_dim=32, tp_dropout=0.0
+        team_embedding_dim=16, pos_embedding_dim=32, tp_dropout=0.0,
+        team_vec_len=0, pos_vec_len=0
     ):
         super(Decoder, self).__init__()
 
@@ -123,7 +134,9 @@ class Decoder(nn.Module):
                     interaction_activation=interaction_activation,
                     team_embedding_dim=team_embedding_dim,
                     pos_embedding_dim=pos_embedding_dim,
-                    tp_dropout=tp_dropout
+                    tp_dropout=tp_dropout,
+                    pos_vec_len=pos_vec_len,
+                    team_vec_len=team_vec_len
                 )
             elif pooling_type == 'spool':
                 self.pool_net = SocialPooling(
@@ -191,7 +204,7 @@ class PoolHiddenNet(nn.Module):
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024, bottleneck_dim=1024,
         activation='relu', batch_norm=True, dropout=0.0, interaction_activation="none",
-        team_embedding_dim=4, pos_embedding_dim=16, tp_dropout=0
+        team_embedding_dim=4, pos_embedding_dim=16, tp_dropout=0, team_vec_len=0, pos_vec_len=0
     ):
         super(PoolHiddenNet, self).__init__()
 
@@ -199,16 +212,20 @@ class PoolHiddenNet(nn.Module):
         self.h_dim = h_dim
         self.bottleneck_dim = bottleneck_dim
         self.embedding_dim = embedding_dim
-        self.team_embedding_dim = team_embedding_dim
-        self.pos_embedding_dim = pos_embedding_dim
+        self.team_embedding_dim = team_embedding_dim if team_vec_len > 0 else 0
+        self.pos_embedding_dim = pos_embedding_dim if pos_vec_len > 0 else 0
         # self.tp_dropout = tp_dropout
+        self.team_vec_len = team_vec_len
+        self.pos_vec_len = pos_vec_len
 
         mlp_pre_dim = embedding_dim + h_dim
         mlp_pre_pool_dims = [mlp_pre_dim, 512, bottleneck_dim]
 
         self.spatial_embedding = nn.Linear(2, embedding_dim)
-        self.team_embedding = nn.Linear(3, team_embedding_dim)
-        self.role_embedding = nn.Linear(4, pos_embedding_dim)
+        if team_vec_len > 0:
+            self.team_embedding = nn.Linear(team_vec_len, team_embedding_dim)
+        if pos_vec_len > 0:
+            self.pos_embedding = nn.Linear(pos_vec_len, pos_embedding_dim)
         self.dropout = nn.Dropout(p=dropout)
         self.tp_dropout = nn.Dropout(p=tp_dropout)
         self.mlp_pre_pool = make_mlp(
@@ -277,28 +294,29 @@ class PoolHiddenNet(nn.Module):
             curr_rel_pos = curr_end_pos_1 - curr_end_pos_2
             curr_rel_embedding = self.spatial_embedding(curr_rel_pos)
 
-
-            # role and team
-            curr_roles = end_roles[start: end]
-            curr_teams = end_teams[start: end]
-
-            curr_roles_embedding = self.role_embedding(curr_roles)
-            curr_roles_embedding = self.tp_dropout(curr_roles_embedding)
-
-            curr_teams_embedding = self.team_embedding(curr_teams)
-            curr_teams_embedding = self.tp_dropout(curr_teams_embedding)
-            curr_rt_embedding = torch.cat([curr_teams_embedding, curr_roles_embedding], dim=1)
-            # RT1, RT2, RT1, RT2
-            curr_rte_1 = curr_rt_embedding.repeat(num_ped, 1)
-
-            # RT1, RT1, RT2, RT2
-            curr_rte_2 = self.repeat(curr_rt_embedding, num_ped)
-            curr_rel_rt = curr_rte_1 - curr_rte_2
-            curr_rel_embedding_with_rt = torch.cat([curr_rel_embedding, curr_rel_rt], dim=1)
             mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
-            if self.interaction_activation == "attentiontp":
-                mlp_h_input = torch.cat([curr_rel_embedding_with_rt, curr_hidden_1], dim=1)
-                att = self.attention(curr_rel_embedding_with_rt)
+            if self.interaction_activation == "attentiontp" and (self.pos_vec_len > 0 or self.team_vec_len > 0):
+                curr_pos = end_roles[start: end]
+                curr_teams = end_teams[start: end]
+                curr_tp_embeddings = []
+                if self.team_vec_len > 0:
+                    curr_teams_embedding = self.team_embedding(curr_teams)
+                    curr_teams_embedding = self.tp_dropout(curr_teams_embedding)
+                    curr_tp_embeddings.append(curr_teams_embedding)
+                if self.pos_vec_len > 0:
+                    curr_pos_embedding = self.pos_embedding(curr_pos)
+                    curr_pos_embedding = self.tp_dropout(curr_pos_embedding)
+                    curr_tp_embeddings.append(curr_pos_embedding)
+                curr_tp_embeddings = torch.cat(curr_tp_embeddings, dim=1)
+
+                # RT1, RT2, RT1, RT2
+                curr_tpe_1 = curr_tp_embeddings.repeat(num_ped, 1)
+                # RT1, RT1, RT2, RT2
+                curr_tpe_2 = self.repeat(curr_tp_embeddings, num_ped)
+                curr_rel_tp = curr_tpe_1 - curr_tpe_2
+                curr_rel_embedding_with_tp = torch.cat([curr_rel_embedding, curr_rel_tp], dim=1)
+                mlp_h_input = torch.cat([curr_rel_embedding_with_tp, curr_hidden_1], dim=1)
+                att = self.attention(curr_rel_embedding_with_tp)
                 mlp_h_input = torch.mul(att, mlp_h_input)
             elif self.interaction_activation == "attention":
                 mlp_h_input = torch.cat([curr_rel_embedding, curr_hidden_1], dim=1)
@@ -441,14 +459,15 @@ class TrajectoryGenerator(nn.Module):
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
         activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
         team_embedding_dim=16, pos_embedding_dim=32, tp_dropout=0.0,
+        team_vec_len=0, pos_vec_len=0,
         interaction_activation="none"
     ):
         super(TrajectoryGenerator, self).__init__()
 
         if pooling_type and pooling_type.lower() == 'none':
             pooling_type = None
-        self.team_embedding_dim = team_embedding_dim
-        self.pos_embedding_dim = pos_embedding_dim
+        self.team_embedding_dim = team_embedding_dim if team_vec_len > 0 else 0
+        self.pos_embedding_dim = pos_embedding_dim if pos_vec_len > 0 else 0
         self.obs_len = obs_len
         self.pred_len = pred_len
         self.mlp_dim = mlp_dim
@@ -472,7 +491,9 @@ class TrajectoryGenerator(nn.Module):
             dropout=dropout,
             team_embedding_dim=self.team_embedding_dim,
             pos_embedding_dim=self.pos_embedding_dim,
-            tp_dropout=tp_dropout
+            tp_dropout=tp_dropout,
+            team_vec_len=team_vec_len,
+            pos_vec_len=pos_vec_len
         )
 
         self.decoder = Decoder(
@@ -489,7 +510,9 @@ class TrajectoryGenerator(nn.Module):
             pooling_type=pooling_type,
             grid_size=grid_size,
             neighborhood_size=neighborhood_size,
-            interaction_activation=interaction_activation
+            interaction_activation=interaction_activation,
+            pos_vec_len=pos_vec_len,
+            team_vec_len=team_vec_len
         )
 
         if pooling_type == 'pool_net':
@@ -500,7 +523,9 @@ class TrajectoryGenerator(nn.Module):
                 bottleneck_dim=bottleneck_dim,
                 activation=activation,
                 batch_norm=batch_norm,
-                interaction_activation=interaction_activation
+                interaction_activation=interaction_activation,
+                pos_vec_len=pos_vec_len,
+                team_vec_len=team_vec_len
             )
         elif pooling_type == 'spool':
             self.pool_net = SocialPooling(
@@ -647,6 +672,7 @@ class TrajectoryDiscriminator(nn.Module):
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
         num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
         d_type='local', team_embedding_dim=16, pos_embedding_dim=32, tp_dropout=0.0,
+        team_vec_len=0, pos_vec_len=0,
             interaction_activation="none"
     ):
         super(TrajectoryDiscriminator, self).__init__()
@@ -667,7 +693,9 @@ class TrajectoryDiscriminator(nn.Module):
             dropout=dropout,
             team_embedding_dim=self.team_embedding_dim,
             pos_embedding_dim=self.pos_embedding_dim,
-            tp_dropout=tp_dropout
+            tp_dropout=tp_dropout,
+            team_vec_len=team_vec_len,
+            pos_vec_len=pos_vec_len
         )
 
         real_classifier_dims = [h_dim, mlp_dim, 1]
@@ -686,7 +714,9 @@ class TrajectoryDiscriminator(nn.Module):
                 bottleneck_dim=h_dim,
                 activation=activation,
                 batch_norm=batch_norm,
-                interaction_activation=interaction_activation
+                interaction_activation=interaction_activation,
+                pos_vec_len=pos_vec_len,
+                team_vec_len=team_vec_len
             )
 
     def forward(self, traj, traj_rel, team, pos, seq_start_end=None):

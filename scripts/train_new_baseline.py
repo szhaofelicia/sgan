@@ -21,10 +21,10 @@ from torch.utils.tensorboard import SummaryWriter
 
 from sgan.data.new_loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss
-from training.initialization import build_models, build_schedulers, build_optimizers
+from training.builders import build_models, build_schedulers, build_optimizers
 from training.checkpoint import restore_from_checkpoint, initialize_checkpoint
 
-from training.gan import generator_step, discriminator_step
+from training.step import generator_step, discriminator_step
 from training.evaluation import check_accuracy
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
@@ -54,7 +54,7 @@ parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
 parser.add_argument('--metric', default="meter", type=str)
 parser.add_argument("--model", default="baseline", type=str)
-parser.add_argument("--schema_path", default="../sgan/data/configs/nfl.json", type=str)
+parser.add_argument("--schema", default="nfl", type=str)
 # Optimization
 parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
@@ -147,8 +147,8 @@ def main(args):
     print(args)
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
-
-    schema = load_schema(args.schema_path)
+    schema_path = "../sgan/data/configs/{}.json".format(args.schema)
+    schema = load_schema(schema_path)
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     # train_path = get_dset_path(args.dataset_name, 'train')
     # val_path = get_dset_path(args.dataset_name, 'val')
@@ -170,7 +170,7 @@ def main(args):
         'There are {} iterations per epoch'.format(iterations_per_epoch)
     )
 
-    generator, discriminator = build_models(args, args.model)
+    generator, discriminator = build_models(args, schema, args.model)
 
     generator.type(float_dtype).train()
     logger.info('Here is the generator:')

@@ -12,6 +12,8 @@ sys.path.append("../")
 import time
 import json
 # import yaml
+import string
+import random
 
 from datetime import datetime
 import socket
@@ -30,6 +32,7 @@ from training.evaluation import check_accuracy
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 
 torch.backends.cudnn.benchmark = True
+random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 now = datetime.now()
 time_str = now.strftime("%Y-%m-%d-%H-%M-%S")
 hostname = socket.gethostname()
@@ -111,7 +114,7 @@ parser.add_argument('--l2_loss_mode', default="raw", type=str) #default:"raw"
 
 
 # Output
-parser.add_argument('--output_dir', default=output_dir) # os.getcwd()
+parser.add_argument('--output_dir', default="../experiments") # os.getcwd()
 parser.add_argument('--print_every', default=10, type=int) #default:5
 parser.add_argument('--checkpoint_every', default=50, type=int) #default:100
 parser.add_argument('--checkpoint_name', default='basketball_phx_sac')
@@ -147,7 +150,7 @@ def load_schema(schema_path):
 
 def main(args):
     print(args)
-
+    args.checkpoint_name = args.checkpoint_name + "_" + random_str
     tensorboard_name = "_".join([args.checkpoint_name, args.dataset_name, time_str, hostname])
     dataset_runs_dir = os.path.join(args.output_dir, "runs", args.dataset_name)
     dataset_ckpt_dir = os.path.join(args.output_dir, "checkpoints", args.dataset_name)

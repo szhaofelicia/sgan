@@ -5,6 +5,7 @@ python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
   --output_dir ./sgan_results \
   --dset 'csgo' \
   --trajD 2 \
+  --metric 'original' \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \

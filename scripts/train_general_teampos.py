@@ -57,7 +57,7 @@ parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
-parser.add_argument('--metric', default="meter", type=str)
+parser.add_argument('--metric', default="foot", type=str) # Denote the original metric, dataset would convert it to meter unless --metric is original
 parser.add_argument("--model", default="team_pos", type=str) # "baseline" or "team_pos"
 parser.add_argument("--dset", default="dota", type=str) # "basketball","csgo","dota","nfl"
 parser.add_argument("--trajD", default=2, type=int) # 2 or 3

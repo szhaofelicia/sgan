@@ -200,11 +200,18 @@ class TrajectoryDataset(Dataset):
         self.team_dim=len(team_ids[self.dset])
         self.posi_dim=len(posi_ids[self.dset])    
 
+        # if metric=="meter":
+        #     self.factor=0.3048 # foot to meter
+        # else:
+        #     self.factor=1.0 # foot to foot
 
-        if metric=="meter":
+        # convert other metrics to meter
+        if metric=="meter" or metric=="original":
+            self.factor=1.0 # original metric
+        elif metric=="foot":
             self.factor=0.3048 # foot to meter
-        else:
-            self.factor=1.0 # foot to foot
+        elif metric=="yard":
+            self.factor=0.9144 # yard to meter
 
         all_files = os.listdir(self.data_dir)
         all_files = [os.path.join(self.data_dir, _path) for _path in all_files]

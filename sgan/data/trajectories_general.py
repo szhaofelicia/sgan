@@ -68,7 +68,7 @@ def read_file(_path, delim='\t'):
     return lines
 
 
-def parse_file(_path, delim='\t',dset="baseketball",trajD=2):
+def parse_file(_path, delim='\t',dset="basketball",trajD=2):
     """
     basketball: index   frame_id    team_id player_id   pos_x   pos_y   player_position
     csgo:   index   frame_id    team_id player_id   pos_x   pos_y   pos_z
@@ -98,27 +98,28 @@ def parse_file(_path, delim='\t',dset="baseketball",trajD=2):
     }
     posi_dim=len(posi_ids[dset])
 
-    index,frame_idx,team_idx, player_idx,traj_idx,posi_idx=0,1,2,3,4,4+trajD
+    index,frame_idx,team_idx, player_idx,traj_idx=0,1,2,3,4
+    posi_idx=4+trajD if dset=="basketball" or dset=="nfl" else None
 
     for line in lines:
         row = []
         team_vector = [0.0] * team_dim  
         pos_vector = [0.0] * posi_dim 
         for col, value in enumerate(line):
-            if col == team_idx:  # team_id
-                team = team_ids[dset].index(int(value))
+            if col==index or col== frame_idx or traj_idx<=col<traj_idx+trajD: # index
+                row.append(value)
+            elif col == team_idx:  # team_id
+                team = team_ids[dset].index(int(value) if isfloat(value) else value)
                 team_vector[team] = 1.0
             elif col == player_idx:  # player_id
                 if value == "ball":
                     row.append(-1.0)
                 else:
                     row.append(value)  # float
-            elif col == posi_idx:  # player_position: basketball,nfl
+            elif col == posi_idx :  # player_position: basketball,nfl
                 positions = value.strip('"').split(",")
                 for pos in positions:
-                    pos_vector[posi_ids.index(pos)] = 1.0
-            else:
-                row.append(value)  # float
+                    pos_vector[posi_ids[dset].index(pos)] = 1.0
         row += team_vector  # team_id
         row += pos_vector  # player_position
 

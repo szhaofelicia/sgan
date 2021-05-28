@@ -4,7 +4,7 @@ python ~/research/sgan/scripts/train_general_teampos.py  \
   --dataset_dir /media/felicia/Data/sgan_data/ \
   --output_dir /media/felicia/Data/sgan_results/dota/ \
   --dset 'csgo' \
-  --trajD 2 \
+  --trajD 3 \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \

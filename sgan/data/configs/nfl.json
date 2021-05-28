@@ -2,5 +2,5 @@
   "name": "NFL",
   "positions": ["player", "ball"],
   "with_ball": true,
-  "spatial_dimension": 2,
+  "spatial_dimension": 2
 }

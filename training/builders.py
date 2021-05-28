@@ -84,7 +84,7 @@ def build_team_pos_models(args, schema):
         pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation,
         pos_vec_len=len(schema['positions']),
-        team_vec_len=3
+        team_vec_len=3 if schema['with_ball'] else 2
     )
 
     generator.apply(init_weights)
@@ -105,7 +105,7 @@ def build_team_pos_models(args, schema):
         team_embedding_dim=args.team_embedding_dim,
         interaction_activation=args.interaction_activation,
         pos_vec_len=len(schema['positions']),
-        team_vec_len=3
+        team_vec_len=3 if schema['with_ball'] else 2
     )
 
     discriminator.apply(init_weights)

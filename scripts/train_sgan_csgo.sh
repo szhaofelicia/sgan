@@ -1,15 +1,15 @@
 python ~/research/sgan/scripts/train_general_teampos.py  \
-  --model 'team_pos' \
-  --dataset_name 'dota-ti-9.v1' \
+  --model 'baseline' \
+  --dataset_name 'csgo_single_v1' \
   --dataset_dir /media/felicia/Data/sgan_data/ \
-  --output_dir /media/felicia/Data/ \
-  --dset 'dota' \
-  --trajD 2s \
+  --output_dir /media/felicia/Data/sgan_results/dota/ \
+  --dset 'csgo' \
+  --trajD 2 \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \
   --encoder_h_dim_g 32 \
-  --encoder_h_dim_d 64\
+  --encoder_h_dim_d 64 \
   --decoder_h_dim 32 \
   --embedding_dim 16 \
   --team_embedding_dim 4 \
@@ -38,9 +38,8 @@ python ~/research/sgan/scripts/train_general_teampos.py  \
   --best_k 10 \
   --g_gamma 1 \
   --d_gamma 1 \
-  --interaction_activation attentiontp \
-  --checkpoint_name dota.team_pos_attentiontp_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10 \
+  --interaction_activation 'none' \
+  --checkpoint_name csgo.baseline_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10 \
   --restore_from_checkpoint 0
-
     # --dataset_dir /scratch/sz2257/data/ \
   # --output_dir ./dota/results \

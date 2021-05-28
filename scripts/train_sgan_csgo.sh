@@ -1,4 +1,4 @@
-python ~/research/sgan/scripts/train_general_teampos.py  \
+python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
   --model 'baseline' \
   --dataset_name 'csgo_single_v1' \
   --dataset_dir /scratch/sz2257/data/ \

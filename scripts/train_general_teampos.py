@@ -201,6 +201,7 @@ def main(args):
         team_embedding_dim=args.team_embedding_dim,
         pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation,
+        trajD=args.trajD
     )
 
     generator.apply(init_weights)
@@ -223,7 +224,8 @@ def main(args):
         activation=args.d_activation, # default: relu,
         pos_embedding_dim=args.pos_embedding_dim,
         team_embedding_dim=args.team_embedding_dim,
-        interaction_activation=args.interaction_activation
+        interaction_activation=args.interaction_activation,
+        trajD=args.trajD
     )
 
     discriminator.apply(init_weights)

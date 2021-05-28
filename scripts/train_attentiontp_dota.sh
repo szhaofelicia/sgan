@@ -4,7 +4,7 @@ python ~/research/sgan/scripts/train_general_teampos.py  \
   --dataset_dir /media/felicia/Data/sgan_data/ \
   --output_dir /media/felicia/Data/ \
   --dset 'dota' \
-  --trajD 2s \
+  --trajD 2 \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \
@@ -38,7 +38,7 @@ python ~/research/sgan/scripts/train_general_teampos.py  \
   --best_k 10 \
   --g_gamma 1 \
   --d_gamma 1 \
-  --interaction_activation attentiontp \
+  --interaction_activation 'attentiontp' \
   --checkpoint_name dota.team_pos_attentiontp_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10 \
   --restore_from_checkpoint 0
 

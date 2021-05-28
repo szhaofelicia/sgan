@@ -5,8 +5,9 @@ import logging
 import os
 
 
-# sys.path.append("/scratch/sz2257/sgan")
-sys.path.append("/home/felicia/research/sgan")
+sys.path.append("/scratch/sz2257/sgan")
+# sys.path.append("/home/felicia/research/sgan")
+
 sys.path.append("../")
 import time
 import json

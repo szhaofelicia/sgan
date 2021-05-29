@@ -347,3 +347,4 @@ class TrajectoryDataset(Dataset):
     def load_data_schema(self):
         with open(self.schema_path, "r") as fp:
             return json.load(fp)
+

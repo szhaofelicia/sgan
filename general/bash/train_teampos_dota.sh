@@ -1,11 +1,10 @@
-python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
-  --model 'baseline' \
+cd ../
+python ./train.py  \
+  --model team_pos \
   --dataset_name 'dota-ti-9.v1' \
-  --dataset_dir /scratch/sz2257/data/ \
-  --output_dir ./sgan_results \
-  --dset 'dota' \
-  --trajD 2 \
-  --metric 'original' \
+  --dataset_dir /media/jnzs1836/New\ Volume/Data/Dota/TI9 \
+  --schema dota \
+  --output_dir ../experiments \
   --delim tab \
   --d_type 'local' \
   --pred_len 8 \
@@ -13,8 +12,6 @@ python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
   --encoder_h_dim_d 64 \
   --decoder_h_dim 32 \
   --embedding_dim 16 \
-  --team_embedding_dim 4 \
-  --pos_embedding_dim 16 \
   --bottleneck_dim 32 \
   --mlp_dim 128 \
   --num_layers 1 \
@@ -24,7 +21,6 @@ python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
   --l2_loss_weight 1 \
   --batch_norm 0 \
   --dropout 0.5 \
-  --tp_dropout 0.5 \
   --batch_size 128 \
   --g_learning_rate 1e-3 \
   --g_steps 1 \
@@ -33,15 +29,12 @@ python /scratch/sz2257/sgan/scripts/train_general_teampos.py  \
   --checkpoint_every 10 \
   --print_every 50 \
   --num_iterations 40000 \
-  --num_epochs 500 \
+  --num_epochs 800 \
   --pooling_type 'pool_net' \
   --clipping_threshold_g 1.5 \
   --best_k 10 \
-  --g_gamma 1 \
-  --d_gamma 1 \
-  --interaction_activation 'none' \
-  --checkpoint_name dota.baseline_v3.6.d5.e16.pe16.te4.tpd5.gg10.dg10.l10 \
-  --restore_from_checkpoint 0
-
-#    --dataset_dir /media/felicia/Data/sgan_data/ \
-#  --output_dir /media/felicia/Data/sgan_results/dota/ \
+  --interaction_activation none \
+  --checkpoint_name nfl5.cnn_debug_v0_4.aln6.dg01.gg01.d5.e16 \
+  --restore_from_checkpoint 0 \
+  --g_gamma 0.1 \
+  --d_gamma 0.1

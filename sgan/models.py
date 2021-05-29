@@ -30,7 +30,7 @@ class Encoder(nn.Module):
     TrajectoryDiscriminator"""
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024, num_layers=1,
-        dropout=0.0
+        dropout=0.0, trajD=2
     ):
         super(Encoder, self).__init__()
 
@@ -38,12 +38,13 @@ class Encoder(nn.Module):
         self.h_dim = h_dim
         self.embedding_dim = embedding_dim
         self.num_layers = num_layers
+        self.trajD=trajD
 
         self.encoder = nn.LSTM(
             embedding_dim, h_dim, num_layers, dropout=dropout
         )
 
-        self.spatial_embedding = nn.Linear(2, embedding_dim)
+        self.spatial_embedding = nn.Linear(self.trajD, embedding_dim)
 
     def init_hidden(self, batch):
         return (
@@ -61,7 +62,7 @@ class Encoder(nn.Module):
         # Encode observed Trajectory
         batch = obs_traj.size(1)
         # obs_traj_embedding = self.spatial_embedding(obs_traj.view(-1, 2))
-        obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, 2))
+        obs_traj_embedding = self.spatial_embedding(obs_traj.reshape(-1, self.trajD))
         obs_traj_embedding = obs_traj_embedding.view(
             -1, batch, self.embedding_dim
         )
@@ -77,7 +78,8 @@ class Decoder(nn.Module):
         self, seq_len, embedding_dim=64, h_dim=128, mlp_dim=1024, num_layers=1,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
         activation='relu', batch_norm=True, pooling_type='pool_net',
-        neighborhood_size=2.0, grid_size=8, interaction_activation="none"
+        neighborhood_size=2.0, grid_size=8, interaction_activation="none",
+        trajD=2
     ):
         super(Decoder, self).__init__()
 
@@ -86,6 +88,7 @@ class Decoder(nn.Module):
         self.h_dim = h_dim
         self.embedding_dim = embedding_dim
         self.pool_every_timestep = pool_every_timestep
+        self.trajD=trajD
 
         self.decoder = nn.LSTM(
             embedding_dim, h_dim, num_layers, dropout=dropout
@@ -101,7 +104,8 @@ class Decoder(nn.Module):
                     activation=activation,
                     batch_norm=batch_norm,
                     dropout=dropout,
-                    interaction_activation=interaction_activation
+                    interaction_activation=interaction_activation,
+                    trajD=self.trajD
                 )
             elif pooling_type == 'spool':
                 self.pool_net = SocialPooling(
@@ -121,8 +125,8 @@ class Decoder(nn.Module):
                 dropout=dropout
             )
 
-        self.spatial_embedding = nn.Linear(2, embedding_dim)
-        self.hidden2pos = nn.Linear(h_dim, 2)
+        self.spatial_embedding = nn.Linear(self.trajD, embedding_dim)
+        self.hidden2pos = nn.Linear(h_dim, self.trajD)
 
     def forward(self, last_pos, last_pos_rel, state_tuple, seq_start_end):
         """
@@ -168,7 +172,8 @@ class PoolHiddenNet(nn.Module):
     """Pooling module as proposed in our paper"""
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, dropout=0.0, interaction_activation="none"
+        activation='relu', batch_norm=True, dropout=0.0, interaction_activation="none",
+        trajD=2
     ):
         super(PoolHiddenNet, self).__init__()
 
@@ -176,11 +181,12 @@ class PoolHiddenNet(nn.Module):
         self.h_dim = h_dim
         self.bottleneck_dim = bottleneck_dim
         self.embedding_dim = embedding_dim
+        self.trajD=trajD
 
         mlp_pre_dim = embedding_dim + h_dim
         mlp_pre_pool_dims = [mlp_pre_dim, 512, bottleneck_dim]
 
-        self.spatial_embedding = nn.Linear(2, embedding_dim)
+        self.spatial_embedding = nn.Linear(self.trajD, embedding_dim)
         self.mlp_pre_pool = make_mlp(
             mlp_pre_pool_dims,
             activation=activation,
@@ -371,7 +377,9 @@ class TrajectoryGenerator(nn.Module):
         decoder_h_dim=128, mlp_dim=1024, num_layers=1, noise_dim=(0, ),
         noise_type='gaussian', noise_mix_type='ped', pooling_type=None,
         pool_every_timestep=True, dropout=0.0, bottleneck_dim=1024,
-        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8, interaction_activation="none"
+        activation='relu', batch_norm=True, neighborhood_size=2.0, grid_size=8,
+        team_embedding_dim=0, pos_embedding_dim=0, tp_dropout=0.0,
+        interaction_activation="none", trajD=2
     ):
         super(TrajectoryGenerator, self).__init__()
 
@@ -392,13 +400,15 @@ class TrajectoryGenerator(nn.Module):
         self.noise_first_dim = 0
         self.pool_every_timestep = pool_every_timestep
         self.bottleneck_dim = 1024
+        # self.trajD=trajD
 
         self.encoder = Encoder(
             embedding_dim=embedding_dim,
             h_dim=encoder_h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            trajD=trajD
         )
 
         self.decoder = Decoder(
@@ -415,7 +425,8 @@ class TrajectoryGenerator(nn.Module):
             pooling_type=pooling_type,
             grid_size=grid_size,
             neighborhood_size=neighborhood_size,
-            interaction_activation=interaction_activation
+            interaction_activation=interaction_activation,
+            trajD=trajD
         )
 
         if pooling_type == 'pool_net':
@@ -426,7 +437,8 @@ class TrajectoryGenerator(nn.Module):
                 bottleneck_dim=bottleneck_dim,
                 activation=activation,
                 batch_norm=batch_norm,
-                interaction_activation=interaction_activation
+                interaction_activation=interaction_activation,
+                trajD=trajD
             )
         elif pooling_type == 'spool':
             self.pool_net = SocialPooling(
@@ -568,7 +580,9 @@ class TrajectoryDiscriminator(nn.Module):
     def __init__(
         self, obs_len, pred_len, embedding_dim=64, h_dim=64, mlp_dim=1024,
         num_layers=1, activation='leakyrelu', batch_norm=True, dropout=0.0,
-        d_type='local', interaction_activation="none"
+        d_type='local',
+        team_embedding_dim=0, pos_embedding_dim=0, tp_dropout=0.0,
+        interaction_activation="none", trajD=2
     ):
         super(TrajectoryDiscriminator, self).__init__()
 
@@ -584,7 +598,8 @@ class TrajectoryDiscriminator(nn.Module):
             h_dim=h_dim,
             mlp_dim=mlp_dim,
             num_layers=num_layers,
-            dropout=dropout
+            dropout=dropout,
+            trajD=trajD
         )
 
         real_classifier_dims = [h_dim, mlp_dim, 1]
@@ -603,7 +618,8 @@ class TrajectoryDiscriminator(nn.Module):
                 bottleneck_dim=h_dim,
                 activation=activation,
                 batch_norm=batch_norm,
-                interaction_activation=interaction_activation
+                interaction_activation=interaction_activation,
+                trajD=trajD
             )
 
     def forward(self, traj, traj_rel, team, pos, seq_start_end=None):

@@ -110,3 +110,54 @@ def generator_step(
     optimizer_g.step()
 
     return losses
+
+def regressor_step(
+    args, batch, regressor, optimizer_r
+):
+    batch = [tensor.cuda() for tensor in batch]
+    (obs_traj, pred_traj_gt, obs_traj_rel, pred_traj_gt_rel,
+     obs_team_vec, obs_pos_vec, pred_team_vec, pred_pos_vec,
+     non_linear_ped, loss_mask, seq_start_end) = batch
+    losses = {}
+    loss = torch.zeros(1).to(pred_traj_gt)
+    r_l2_loss_rel = []
+
+    loss_mask = loss_mask[:, args.obs_len:]
+
+    for _ in range(args.best_k):
+        generator_out = regressor(obs_traj, obs_traj_rel, seq_start_end)
+
+
+        pred_traj_fake_rel = generator_out
+
+        if args.l2_loss_weight > 0:
+            r_l2_loss_rel.append(args.l2_loss_weight * l2_loss(
+                pred_traj_fake_rel,
+                pred_traj_gt_rel,
+                loss_mask,
+                mode=args.l2_loss_mode # default:"raw"
+            ))
+
+    r_l2_loss_sum_rel = torch.zeros(1).to(pred_traj_gt)
+    if args.l2_loss_weight > 0:
+        r_l2_loss_rel = torch.stack(r_l2_loss_rel, dim=1)
+        for start, end in seq_start_end.data:
+            _r_l2_loss_rel = r_l2_loss_rel[start:end]
+            _r_l2_loss_rel = torch.sum(_r_l2_loss_rel, dim=0)
+            _r_l2_loss_rel = torch.min(_r_l2_loss_rel) / torch.sum(
+                loss_mask[start:end])
+            r_l2_loss_sum_rel += _r_l2_loss_rel
+        losses['R_l2_loss_rel'] = r_l2_loss_sum_rel.item()
+        loss += r_l2_loss_sum_rel
+
+    losses['R_total_loss'] = loss.item()
+
+    optimizer_r.zero_grad()
+    loss.backward()
+    if args.clipping_threshold_g > 0:
+        nn.utils.clip_grad_norm_(
+            regressor.parameters(), args.clipping_threshold_g
+        )
+    optimizer_r.step()
+
+    return losses

@@ -19,6 +19,17 @@ def get_dtypes(args):
         float_dtype = torch.cuda.FloatTensor
     return long_dtype, float_dtype
 
+def build_linear_model(args):
+    regressor = TrajectoryLinearRegressor(
+        obs_len=args.obs_len,
+        pred_len=args.pred_len,
+        embedding_dim=args.embedding_dim,
+        mlp_dim=args.mlp_dim,
+        dropout=args.dropout,
+        batch_norm=args.batch_norm,
+    )
+    return regressor
+
 
 def build_sgan_models(args):
     long_dtype, float_dtype = get_dtypes(args)
@@ -117,7 +128,8 @@ def build_models(args, schema, model_class="sgan"):
         return build_sgan_models(args)
     elif model_class == "team_pos":
         return build_team_pos_models(args, schema)
-
+    elif model_class == "linear":
+        return build_linear_model(args)
 
 def build_optimizers(args, generator, discriminator):
     optimizer_g = optim.Adam(generator.parameters(), lr=args.g_learning_rate)

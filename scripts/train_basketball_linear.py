@@ -19,7 +19,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from sgan.data.loader import data_loader
-from sgan.losses import  l2_loss
+from sgan.losses import l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
 from sgan.models_linear import TrajectoryLinearRegressor

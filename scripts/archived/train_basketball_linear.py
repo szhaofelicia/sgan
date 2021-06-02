@@ -5,7 +5,7 @@ import logging
 import os
 
 sys.path.append("/scratch/sz2257/sgan")
-sys.path.append("../")
+sys.path.append("../../")
 import time
 import json
 # import yaml

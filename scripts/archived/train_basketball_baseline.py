@@ -4,11 +4,11 @@ import gc
 import logging
 import os
 
+# print("Current Working Directory " , os.getcwd())
+# sys.path.append(os.getcwd())
 
-sys.path.append("/scratch/sz2257/sgan")
-# sys.path.append("/home/felicia/research/sgan")
-
-sys.path.append("../")
+# sys.path.append("/scratch/sz2257/sgan")
+sys.path.append("../../")
 import time
 import json
 # import yaml
@@ -25,9 +25,8 @@ from sgan.data.loader import data_loader
 from sgan.losses import gan_g_loss, gan_d_loss, l2_loss
 from sgan.losses import displacement_error, final_displacement_error
 
-from sgan.models import TrajectoryGenerator as GeneratorBaseline, TrajectoryDiscriminator as DiscriminatorBaseline
-# from sgan.models_old import TrajectoryGenerator,  TrajectoryDiscriminator
-from sgan.models_teampos import TrajectoryGenerator as TeamPosGenerator, TrajectoryDiscriminator as TeamPosDiscriminator
+from sgan.models import TrajectoryGenerator, TrajectoryDiscriminator
+
 
 from sgan.utils import int_tuple, bool_flag, get_total_norm
 from sgan.utils import relative_to_abs, get_dset_path
@@ -37,12 +36,12 @@ torch.backends.cudnn.benchmark = True
 writer = SummaryWriter()
 
 time_str="_".join(writer.get_logdir().split("/")[1].split("_")[:2])
-
 # output_dir="/media/felicia/Data/sgan_results/{}".format(time_str)
-output_dir="/scratch/sz2257/sgan_results/{}".format(time_str)
+
+output_dir="/scratch/sz2257/sgan/sgan_results/{}".format(time_str)
 
 # data_dir='/media/felicia/Data/basketball-partial'
-data_dir='/scratch/sz2257/basketball-partial'
+data_dir='/scratch/sz2257/sgan/basketball-partial'
 
 parser = argparse.ArgumentParser()
 FORMAT = '[%(levelname)s: %(filename)s: %(lineno)4d]: %(message)s'
@@ -57,12 +56,8 @@ parser.add_argument('--loader_num_workers', default=4, type=int)
 parser.add_argument('--obs_len', default=8, type=int)
 parser.add_argument('--pred_len', default=8, type=int)
 parser.add_argument('--skip', default=1, type=int)
-parser.add_argument('--metric', default="foot", type=str) # Denote the original metric, dataset would convert it to meter unless --metric is original
-parser.add_argument("--model", default="team_pos", type=str) # "baseline" or "team_pos"
-parser.add_argument("--dset", default="dota", type=str) # "basketball","csgo","dota","nfl"
-parser.add_argument("--trajD", default=2, type=int) # 2 or 3
-
-
+parser.add_argument('--metric', default="meter", type=str)
+parser.add_argument("--model", default="baseline", type=str)
 # Optimization
 parser.add_argument('--batch_size', default=128, type=int) #32
 parser.add_argument('--num_iterations', default=20000, type=int) #default:10000
@@ -72,12 +67,9 @@ parser.add_argument('--num_epochs', default=500, type=int)
 parser.add_argument('--embedding_dim', default=16, type=int) #64
 parser.add_argument('--num_layers', default=1, type=int)
 parser.add_argument('--dropout', default=0, type=float)
-parser.add_argument('--tp_dropout', default=0, type=float)
 parser.add_argument('--batch_norm', default=0, type=bool_flag) #default:0-bool_flag
 parser.add_argument('--mlp_dim', default=64, type=int) #default: 1024
-parser.add_argument('--team_embedding_dim', default=16, type=int) #default: 1024
-parser.add_argument('--pos_embedding_dim', default=32, type=int) #default: 1024
-parser.add_argument('--interaction_activation', default="none", type=str) # none, attention,attentiontp
+parser.add_argument('--interaction_activation', default="none", type=str)
 
 # Generator Options
 parser.add_argument('--encoder_h_dim_g', default=32, type=int) #default:64
@@ -89,16 +81,14 @@ parser.add_argument('--clipping_threshold_g', default=1.5, type=float) #default:
 parser.add_argument('--g_learning_rate', default=1e-3, type=float) #default:5e-4,0.001
 parser.add_argument('--g_steps', default=1, type=int)
 parser.add_argument('--g_gamma', default=0.8, type=float) #default:5e-4, 0.001
-
 # Discriminator Options
 parser.add_argument('--d_type', default='local', type=str) #default:'local'
 parser.add_argument('--encoder_h_dim_d', default=64, type=int) #default:64
 parser.add_argument('--d_learning_rate', default=1e-3, type=float) #default:5e-4, 0.001
-parser.add_argument('--d_gamma', default=0.8, type=float) #default:5e-4, 0.001
 parser.add_argument('--d_steps', default=2, type=int) #default:2
 parser.add_argument('--clipping_threshold_d', default=0, type=float)
 parser.add_argument('--d_activation', default='relu', type=str) # 'relu'
-
+parser.add_argument('--d_gamma', default=0.8, type=float) #default:5e-4, 0.001
 
 # Pooling Options
 parser.add_argument('--pooling_type', default='pool_net') #default:'pool_net'
@@ -133,12 +123,6 @@ parser.add_argument('--timing', default=0, type=int)
 parser.add_argument('--gpu_num', default="0", type=str)
 
 
-# MODELS = {
-#     "baseline": (GeneratorBaseline, DiscriminatorBaseline),
-#     "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
-# }
-
-
 def init_weights(m):
     classname = m.__class__.__name__
     if classname.find('Linear') != -1:
@@ -153,6 +137,7 @@ def get_dtypes(args):
         float_dtype = torch.cuda.FloatTensor
     return long_dtype, float_dtype
 
+
 def main(args):
     print(args)
     if not os.path.exists(args.output_dir):
@@ -161,8 +146,8 @@ def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     # train_path = get_dset_path(args.dataset_name, 'train')
     # val_path = get_dset_path(args.dataset_name, 'val')
-    train_path= os.path.join(args.dataset_dir,args.dataset_name,'train') # train or train_sample
-    val_path= os.path.join(args.dataset_dir,args.dataset_name,'valid') # valid or val_sample
+    train_path= os.path.join(args.dataset_dir,args.dataset_name,'train_sample') # 10 files:0-9
+    val_path= os.path.join(args.dataset_dir,args.dataset_name,'val_sample') # 5 files: 10-14
 
     long_dtype, float_dtype = get_dtypes(args)
 
@@ -179,7 +164,6 @@ def main(args):
         'There are {} iterations per epoch'.format(iterations_per_epoch)
     )
 
-
     generator = TrajectoryGenerator(
         obs_len=args.obs_len,
         pred_len=args.pred_len,
@@ -194,20 +178,13 @@ def main(args):
         pooling_type=args.pooling_type,
         pool_every_timestep=args.pool_every_timestep,
         dropout=args.dropout,
-        tp_dropout=args.tp_dropout,
         bottleneck_dim=args.bottleneck_dim,
         neighborhood_size=args.neighborhood_size,
         grid_size=args.grid_size,
-        batch_norm=args.batch_norm,
-        team_embedding_dim=args.team_embedding_dim,
-        pos_embedding_dim=args.pos_embedding_dim,
         interaction_activation=args.interaction_activation,
-        trajD=args.trajD
-    )
-
+        batch_norm=args.batch_norm)
     generator.apply(init_weights)
     generator.type(float_dtype).train()
-    generator = generator.cuda()
     logger.info('Here is the generator:')
     logger.info(generator)
 
@@ -219,19 +196,14 @@ def main(args):
         mlp_dim=args.mlp_dim,
         num_layers=args.num_layers,
         dropout=args.dropout,
-        tp_dropout=args.tp_dropout,
         batch_norm=args.batch_norm,
         d_type=args.d_type,
-        activation=args.d_activation, # default: relu,
-        pos_embedding_dim=args.pos_embedding_dim,
-        team_embedding_dim=args.team_embedding_dim,
         interaction_activation=args.interaction_activation,
-        trajD=args.trajD
+        activation=args.d_activation # default: relu
     )
 
     discriminator.apply(init_weights)
     discriminator.type(float_dtype).train()
-    discriminator = discriminator.cuda()
     logger.info('Here is the discriminator:')
     logger.info(discriminator)
 
@@ -242,8 +214,10 @@ def main(args):
     optimizer_d = optim.Adam(
         discriminator.parameters(), lr=args.d_learning_rate
     )
+
     scheduler_g = optim.lr_scheduler.MultiStepLR(optimizer_g, milestones=[10, 50], gamma=args.g_gamma)
     scheduler_d = optim.lr_scheduler.MultiStepLR(optimizer_d, milestones=[10, 50], gamma=args.d_gamma)
+
     # Maybe restore from checkpoint
     restore_path = None
     if args.checkpoint_start_from is not None:
@@ -300,7 +274,6 @@ def main(args):
         logger.info('Starting epoch {}'.format(epoch))
         scheduler_g.step()
         scheduler_d.step()
-
         for batch in train_loader:
             if args.timing == 1:
                 torch.cuda.synchronize()
@@ -689,22 +662,15 @@ def cal_fde(
 
 if __name__ == '__main__':
     args = parser.parse_args()
-
-    MODELS = {
-        "baseline": (GeneratorBaseline, DiscriminatorBaseline),
-        "team_pos": (TeamPosGenerator, TeamPosDiscriminator)
-    }
-
-    TrajectoryGenerator, TrajectoryDiscriminator = MODELS[args.model]
     log_path="{}/config.txt".format(writer.get_logdir())
     with open(log_path,"a") as f:
         json.dump(args.__dict__,f,indent=2)
-
+    writer = SummaryWriter(args.tb_path)
     # log_path="{}/config.yaml".format(writer.get_logdir())
     # with open(log_path,'w') as file:
     #     args_file=yaml.dump(args,file)
     # print(args_file)
-    writer = SummaryWriter(args.tb_path)
+
     main(args)
     writer.flush()
 
